@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
+const nextConfig = {
+  // We moved this out of "experimental"
+  serverExternalPackages: ['better-sqlite3'], 
 };
 
 export default nextConfig;
