@@ -68,24 +68,30 @@ export async function POST(request: Request) {
 }
 
 // GET endpoint (Used by the Sleep button to check status)
+// GET endpoint (Used by the Sleep button to check status)
 export async function GET() {
-  // 1. Check Sleep Status
+  // 1. Check Sleep Status AND get start time
   const activeSleep = db.prepare(`
-    SELECT id FROM events 
+    SELECT id, startTime FROM events 
     WHERE type = 'SLEEP' AND endTime IS NULL 
     LIMIT 1
-  `).get();
+  `).get() as { id: number; startTime: string } | undefined;
 
-  // 2. Check Medicine Status (Resetting at 6 AM)
+  // 2. Get the LAST completed sleep (to calculate "Awake for X")
+  const lastCompletedSleep = db.prepare(`
+    SELECT endTime FROM events 
+    WHERE type = 'SLEEP' AND endTime IS NOT NULL 
+    ORDER BY endTime DESC 
+    LIMIT 1
+  `).get() as { endTime: string } | undefined;
+
+  // 3. Check Medicine Status (Resetting at 6 AM)
   const now = new Date();
-  const RESET_HOUR = 6; // <-- Change this number later to change frequency/time
+  const RESET_HOUR = 6;
   
-  // Calculate the "Start of the current period"
-  // If it is currently 5 AM, the "day" started yesterday at 6 AM.
-  // If it is currently 7 AM, the "day" started today at 6 AM.
   let cutoffDate = new Date(now);
   if (now.getHours() < RESET_HOUR) {
-    cutoffDate.setDate(now.getDate() - 1); // Go back one day
+    cutoffDate.setDate(now.getDate() - 1);
   }
   cutoffDate.setHours(RESET_HOUR, 0, 0, 0);
 
@@ -95,9 +101,12 @@ export async function GET() {
     LIMIT 1
   `).get(cutoffDate.toISOString());
 
+  // 4. Return all the data
   return NextResponse.json({ 
     isSleeping: !!activeSleep,
-    medicineGiven: !!medicineLog 
+    sleepStartTime: activeSleep?.startTime || null,
+    medicineGiven: !!medicineLog,
+    lastSleepEnd: lastCompletedSleep?.endTime || null
   });
 }
 
