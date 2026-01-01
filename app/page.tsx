@@ -56,9 +56,22 @@ export default function Home() {
           {events.length === 0 ? (
             <p className="text-gray-400 text-center italic mt-10">No events logged yet.</p>
           ) : (
+            // Find the part where you map events:
             events.map((event) => {
               const style = getEventStyle(event.type);
               
+              // Custom logic for Sleep duration
+              let timeDisplay = formatTime(event.startTime);
+              if (event.type === 'SLEEP') {
+                if (!event.endTime) {
+                  timeDisplay = "💤 Sleeping now...";
+                } else {
+                  // Optional: Calculate duration here if you want
+                  // For now, let's just show start time
+                  timeDisplay = `${formatTime(event.startTime)} - ${formatTime(event.endTime)}`;
+                }
+              }
+
               return (
                 <div key={event.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center">
                   <div className="flex items-center gap-3">
@@ -71,7 +84,7 @@ export default function Home() {
                     </div>
                   </div>
                   <span className="text-sm text-gray-400">
-                    {formatTime(event.startTime)}
+                    {timeDisplay}
                   </span>
                 </div>
               );
