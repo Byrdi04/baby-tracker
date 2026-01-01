@@ -1,18 +1,19 @@
-// app/api/events/route.ts
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 
-// 1. POST: Handles the Click
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { type, note } = body;
+    
+    // We extract 'data' here so we can save the weight/medicine details
+    const { type, note, data } = body;
 
     if (!type) return new NextResponse("Missing type", { status: 400 });
 
-    // --- SLEEP TOGGLE LOGIC ---
+    // ==========================================
+    // 1. SLEEP LOGIC (Toggle Start/Stop)
+    // ==========================================
     if (type === 'SLEEP') {
-      // Check if there is an unfinished sleep session (endTime is NULL)
       const activeSleep = db.prepare(`
         SELECT id FROM events 
         WHERE type = 'SLEEP' AND endTime IS NULL 
@@ -20,28 +21,31 @@ export async function POST(request: Request) {
       `).get() as { id: number } | undefined;
 
       if (activeSleep) {
-        // A. STOP SLEEPING (Update the existing row)
+        // STOP SLEEPING
         db.prepare(`
           UPDATE events 
           SET endTime = ? 
           WHERE id = ?
         `).run(new Date().toISOString(), activeSleep.id);
         
-        console.log(`Stopped sleep session ID: ${activeSleep.id}`);
         return NextResponse.json({ status: 'stopped', id: activeSleep.id });
       } else {
-        // B. START SLEEPING (Insert a new row)
+        // START SLEEPING
         const info = db.prepare(`
           INSERT INTO events (type, startTime, data)
           VALUES (?, ?, ?)
         `).run('SLEEP', new Date().toISOString(), JSON.stringify({}));
 
-        console.log(`Started sleep session ID: ${info.lastInsertRowid}`);
         return NextResponse.json({ status: 'started', id: info.lastInsertRowid });
       }
+      // ⚠️ IMPORTANT: Sleep logic Returns here. It does not go further.
     }
 
-    // --- STANDARD LOGIC (Feed, Diaper, Note) ---
+    // ==========================================
+    // 2. STANDARD LOGIC (Weight, Feed, Diaper, Medicine)
+    // ==========================================
+    // This part runs for EVERYTHING that is NOT Sleep.
+    
     const insertStmt = db.prepare(`
       INSERT INTO events (type, startTime, note, data)
       VALUES (?, ?, ?, ?)
@@ -51,7 +55,8 @@ export async function POST(request: Request) {
       type,
       new Date().toISOString(),
       note || null,
-      JSON.stringify({})
+      // We save the 'data' object (like { amount: 5.2 }) as a string here
+      JSON.stringify(data || {}) 
     );
 
     return NextResponse.json({ message: "Logged", id: info.lastInsertRowid });
@@ -62,15 +67,13 @@ export async function POST(request: Request) {
   }
 }
 
-// 2. GET: Tells the button the current status on Page Load
+// GET endpoint (Used by the Sleep button to check status)
 export async function GET() {
-  // Look for any open sleep session
   const activeSleep = db.prepare(`
     SELECT id FROM events 
     WHERE type = 'SLEEP' AND endTime IS NULL 
     LIMIT 1
   `).get();
 
-  // Return true if found, false if not
   return NextResponse.json({ isSleeping: !!activeSleep });
 }

@@ -5,8 +5,9 @@ import QuickButtons from '@/components/QuickButtons';
 type EventRow = {
   id: number;
   type: string;
-  startTime: string;
-  data: string;
+  startTime: string; // SQLite returns dates as strings
+  endTime: string | null;
+  data: string;      // This is the JSON string (e.g. '{"amount": "5.5"}')
 };
 
 // Helper to show nice time (10:30 AM)
@@ -20,28 +21,20 @@ function formatTime(dateStr: string) {
 }
 
 // Helper for colors
-// app/page.tsx
-
-// ... imports
-
 const getEventStyle = (type: string) => {
   switch (type) {
     case 'SLEEP': return { icon: '😴', bg: 'bg-blue-100 dark:bg-blue-900' };
     case 'FEED': return { icon: '🍼', bg: 'bg-pink-100 dark:bg-pink-900' };
     case 'DIAPER': return { icon: '💩', bg: 'bg-yellow-100 dark:bg-yellow-900' };
-    // NEW STYLES HERE:
     case 'MEDICINE': return { icon: '💊', bg: 'bg-green-100 dark:bg-green-900' };
     case 'WEIGHT': return { icon: '⚖️', bg: 'bg-cyan-100 dark:bg-cyan-900' };
-    
     default: return { icon: '📝', bg: 'bg-gray-100 dark:bg-gray-700' };
   }
 };
 
-
 export default function Home() {
-  // 1. FETCH DATA: Direct SQL query
-  // We use .all() to get an array of rows
-  const stmt = db.prepare('SELECT * FROM events ORDER BY startTime DESC LIMIT 10');
+  // 1. FETCH DATA
+  const stmt = db.prepare('SELECT * FROM events ORDER BY startTime DESC LIMIT 20');
   const events = stmt.all() as EventRow[];
 
   return (
@@ -65,21 +58,31 @@ export default function Home() {
           {events.length === 0 ? (
             <p className="text-gray-400 text-center italic mt-10">No events logged yet.</p>
           ) : (
-            // Find the part where you map events:
             events.map((event) => {
               const style = getEventStyle(event.type);
               
-              // Custom logic for Sleep duration
+              // --- NEW LOGIC STARTS HERE ---
+              
+              // 1. Parse the extra data (weight, etc.)
+              const eventData = JSON.parse(event.data || '{}');
+
+              // 2. Determine what text to show under the title
+              let subText = "Logged"; // Default text
+
+              if (event.type === 'WEIGHT' && eventData.amount) {
+                subText = `${eventData.amount} kg`;
+              }
+              
+              // 3. Determine time display (handle sleep duration)
               let timeDisplay = formatTime(event.startTime);
               if (event.type === 'SLEEP') {
                 if (!event.endTime) {
                   timeDisplay = "💤 Sleeping now...";
                 } else {
-                  // Optional: Calculate duration here if you want
-                  // For now, let's just show start time
                   timeDisplay = `${formatTime(event.startTime)} - ${formatTime(event.endTime)}`;
                 }
               }
+              // --- NEW LOGIC ENDS HERE ---
 
               return (
                 <div key={event.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center">
@@ -89,7 +92,9 @@ export default function Home() {
                     </span>
                     <div>
                       <p className="font-medium capitalize">{event.type.toLowerCase()}</p>
-                      <p className="text-xs text-gray-500">Logged</p>
+                      
+                      {/* We use our dynamic subText variable here */}
+                      <p className="text-xs text-gray-500">{subText}</p>
                     </div>
                   </div>
                   <span className="text-sm text-gray-400">
