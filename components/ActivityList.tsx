@@ -115,10 +115,7 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
             const eventData = JSON.parse(event.data || '{}');
             
             // --- LOGIC CHANGE 1: Handle the "subText" ---
-            let subText = "Logged"; 
-            
-            // If it is sleep, we don't want to say "Logged", so we empty it
-            if (event.type === 'SLEEP') subText = ""; 
+            let subText = ""; 
             
             // Specific overrides for Weight
             if (event.type === 'WEIGHT' && eventData.amount) subText = `${eventData.amount} kg`;
@@ -128,24 +125,17 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
             
             // --- LOGIC CHANGE 2: Handle Time and "Sleeping since..." ---
             let timeDisplay = formatDisplayTime(event.startTime);
-            let durationBadge = null;
 
             if (event.type === 'SLEEP') {
-              if (event.endTime) {
+            if (event.endTime) {
                 // FINISHED SLEEPING
                 timeDisplay = `${formatDisplayTime(event.startTime)} - ${formatDisplayTime(event.endTime)}`;
                 const duration = getDurationString(event.startTime, event.endTime);
-                
-                durationBadge = (
-                  <span className="ml-2 px-2 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-200">
-                    {duration}
-                  </span>
-                );
-              } else {
+                subText = duration; // Show duration as subText
+            } else {
                 // ACTIVELY SLEEPING (ONGOING)
-                // Here is where we change the text to include the start time
                 timeDisplay = `💤 Sleeping since ${formatDisplayTime(event.startTime)}`;
-              }
+            }
             }
 
             return (
@@ -157,9 +147,8 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                 <div className="flex items-center gap-3">
                   <span className={`${style.bg} p-2 rounded-full text-lg`}>{style.icon}</span>
                   <div>
-                    <p className="font-medium capitalize flex items-center">
-                      {event.type.toLowerCase()}
-                      {durationBadge}
+                    <p className="font-medium capitalize">
+                    {event.type.toLowerCase()}
                     </p>
                     {/* Only show the subText paragraph if subText is not empty */}
                     {subText && <p className="text-xs text-gray-500">{subText}</p>}

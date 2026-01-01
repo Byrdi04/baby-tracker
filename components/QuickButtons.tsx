@@ -164,47 +164,49 @@ export default function QuickButtons() {
     <>
       <section className="grid grid-cols-2 gap-4 mb-8">
         
-        {/* Sleep */}
-        <button onClick={() => handleLog('SLEEP')} disabled={loading} className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${isSleeping ? 'bg-indigo-800 text-blue-100 ring-4 ring-indigo-300' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+        {/* Layout of the Sleep button*/}
+        <button onClick={() => handleLog('SLEEP')} disabled={loading} className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${isSleeping ? 'bg-indigo-800 text-white ring-4 ring-indigo-200 hover:bg-indigo-200 text-indigo-900' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900'}`}>
           <span className="text-2xl">{isSleeping ? '😴' : '👶'}</span>
-          <span className="font-semibold">{isSleeping ? sleepText : awakeText}</span>
+          <span className={`font-semibold whitespace-nowrap ${(isSleeping ? sleepText : awakeText).length > 19 ? 'text-sm' : 'text-base'}`}>
+        {isSleeping ? sleepText : awakeText}
+          </span>
         </button>
         
-        {/* Feed - NOW OPENS MODAL */}
+        {/* layout of the Feed button - NOW OPENS MODAL */}
         <button 
           onClick={() => setShowFeedModal(true)} 
-          className="bg-pink-600 hover:bg-pink-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className="bg-green-200 hover:bg-green-300 active:scale-95 text-green-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
         >
           <span className="text-2xl">🍼</span><span className="font-semibold">Feed</span>
         </button>
 
-        {/* Diaper */}
-        <button onClick={() => handleLog('DIAPER')} className="bg-yellow-600 hover:bg-yellow-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all">
+        {/* Layout of the Diaper button */}
+        <button onClick={() => handleLog('DIAPER')} className="bg-orange-200 hover:bg-orange-300 active:scale-95 text-orange-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all">
           <span className="text-2xl">💩</span><span className="font-semibold">Diaper</span>
         </button>
 
-        {/* Medicine */}
+        {/* Layout of the Medicine button */}
         <button 
           onClick={() => handleLog('MEDICINE')} 
-          className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${medicineGiven ? 'bg-green-200 text-green-800 hover:bg-green-300' : 'bg-green-600 text-white hover:bg-green-700 ring-4 ring-green-200'}`}
+          className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${medicineGiven ? 'bg-rose-100 text-rose-900 hover:bg-rose-200' : 'bg-rose-500 text-white hover:bg-rose-600 ring-4 ring-rose-300'}`}
         >
-          <span className="text-2xl">{medicineGiven ? '✅' : '💊'}</span>
+          <span className="text-2xl">{medicineGiven ? '👏' : '💊'}</span>
           <span className="font-semibold">{medicineGiven ? 'Meds Given' : 'Give Meds'}</span>
         </button>
 
-        {/* Weight */}
+        {/* Layout of the Weight button */}
         <button 
           onClick={() => setShowWeightModal(true)}
-          className="bg-cyan-600 hover:bg-cyan-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className="bg-cyan-100 hover:bg-cyan-200 active:scale-95 text-cyan-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
         >
           <span className="text-2xl">⚖️</span>
           <span className="font-semibold">Weight</span>
         </button>
 
-        {/* Note */}
+        {/* Layout of the Note button */}
         <button 
           onClick={() => setShowNoteModal(true)} 
-          className="bg-gray-600 hover:bg-gray-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className="bg-slate-300 hover:bg-slate-400 active:scale-95 text-slate-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
         >
           <span className="text-xl">📝</span><span className="font-semibold">Note</span>
         </button>
