@@ -1,4 +1,5 @@
 import db from '@/lib/db';
+import WeightCharts from './WeightCharts';
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -19,18 +20,46 @@ const formatDate = (dateStr: string) => {
 };
 
 export default function WeightPage() {
-  // Fetch all weight events
+  // Fetch all weight events (oldest first for chart)
   const stmt = db.prepare(`
     SELECT * FROM events 
     WHERE type = 'WEIGHT' 
-    ORDER BY startTime DESC 
+    ORDER BY startTime ASC 
     LIMIT 100
   `);
-  const weightEvents = stmt.all() as any[];
+  const weightEventsAsc = stmt.all() as any[];
 
-  // Calculate weight change (compare to previous entry)
+  // Reverse for display (newest first)
+  const weightEvents = [...weightEventsAsc].reverse();
+
+  // ========== STATISTICS CALCULATIONS ==========
+
+  // 1. First and latest weight
+  const firstWeight = weightEventsAsc.length > 0 
+    ? parseFloat(JSON.parse(weightEventsAsc[0].data || '{}').amount || 0)
+    : 0;
+  
+  const latestWeight = weightEventsAsc.length > 0 
+    ? parseFloat(JSON.parse(weightEventsAsc[weightEventsAsc.length - 1].data || '{}').amount || 0)
+    : 0;
+
+  const totalGain = latestWeight - firstWeight;
+
+  // 2. Prepare chart data
+  const chartData = weightEventsAsc.map(event => {
+    const data = JSON.parse(event.data || '{}');
+    return {
+      date: new Date(event.startTime).toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'short' 
+      }),
+      weight: parseFloat(data.amount) || 0
+    };
+  });
+
+  // 3. Calculate weight change from previous entry
   const getWeightChange = (currentIndex: number) => {
-    if (currentIndex >= weightEvents.length - 1) return null; // No previous entry
+    if (currentIndex >= weightEvents.length - 1) return null;
     
     const currentData = JSON.parse(weightEvents[currentIndex].data || '{}');
     const previousData = JSON.parse(weightEvents[currentIndex + 1].data || '{}');
@@ -40,8 +69,7 @@ export default function WeightPage() {
     
     if (isNaN(currentWeight) || isNaN(previousWeight)) return null;
     
-    const change = currentWeight - previousWeight;
-    return change;
+    return currentWeight - previousWeight;
   };
 
   return (
@@ -50,11 +78,35 @@ export default function WeightPage() {
       {/* Header */}
       <header className="mb-6">
         <h1 className="text-2xl font-bold">⚖️ Weight Log</h1>
-        <p className="text-gray-500 text-sm">Weight tracking over time</p>
+        <p className="text-gray-500 text-sm">Weight tracking and growth</p>
       </header>
+
+      {/* Statistics Cards */}
+      <section className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-cyan-50 dark:bg-cyan-900 p-4 rounded-xl">
+          <p className="text-cyan-600 dark:text-cyan-300 text-sm font-medium">Current Weight</p>
+          <p className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">
+            {latestWeight > 0 ? `${latestWeight} kg` : '—'}
+          </p>
+        </div>
+        <div className={`p-4 rounded-xl ${totalGain >= 0 ? 'bg-green-50 dark:bg-green-900' : 'bg-red-50 dark:bg-red-900'}`}>
+          <p className={`text-sm font-medium ${totalGain >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
+            Total Change
+          </p>
+          <p className={`text-2xl font-bold ${totalGain >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
+            {totalGain > 0 ? '+' : ''}{totalGain.toFixed(2)} kg
+          </p>
+        </div>
+      </section>
+
+      {/* Growth Chart (Client Component) */}
+      <WeightCharts chartData={chartData} />
 
       {/* Weight List */}
       <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          All Entries
+        </h2>
         {weightEvents.length === 0 ? (
           <p className="text-gray-400 text-center italic mt-10">
             No weight entries yet.
@@ -70,7 +122,6 @@ export default function WeightPage() {
                 key={event.id}
                 className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center"
               >
-                {/* Left side: Date and time */}
                 <div className="flex items-center gap-3">
                   <span className="bg-cyan-100 dark:bg-cyan-900 p-2 rounded-full text-xl">
                     ⚖️
@@ -84,8 +135,6 @@ export default function WeightPage() {
                     </p>
                   </div>
                 </div>
-
-                {/* Right side: Weight and change */}
                 <div className="text-right">
                   <p className="font-bold text-lg text-gray-900 dark:text-white">
                     {weight} kg
