@@ -20,14 +20,23 @@ function formatTime(dateStr: string) {
 }
 
 // Helper for colors
+// app/page.tsx
+
+// ... imports
+
 const getEventStyle = (type: string) => {
   switch (type) {
     case 'SLEEP': return { icon: '😴', bg: 'bg-blue-100 dark:bg-blue-900' };
     case 'FEED': return { icon: '🍼', bg: 'bg-pink-100 dark:bg-pink-900' };
     case 'DIAPER': return { icon: '💩', bg: 'bg-yellow-100 dark:bg-yellow-900' };
+    // NEW STYLES HERE:
+    case 'MEDICINE': return { icon: '💊', bg: 'bg-green-100 dark:bg-green-900' };
+    case 'WEIGHT': return { icon: '⚖️', bg: 'bg-cyan-100 dark:bg-cyan-900' };
+    
     default: return { icon: '📝', bg: 'bg-gray-100 dark:bg-gray-700' };
   }
 };
+
 
 export default function Home() {
   // 1. FETCH DATA: Direct SQL query
