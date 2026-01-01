@@ -165,7 +165,7 @@ export default function QuickButtons() {
       <section className="grid grid-cols-2 gap-4 mb-8">
         
         {/* Layout of the Sleep button*/}
-        <button onClick={() => handleLog('SLEEP')} disabled={loading} className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${isSleeping ? 'bg-indigo-800 text-white ring-4 ring-indigo-200 hover:bg-indigo-200 text-indigo-900' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900'}`}>
+        <button onClick={() => handleLog('SLEEP')} disabled={loading} className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${isSleeping ? 'bg-indigo-800 text-white ring-4 ring-indigo-200 hover:bg-indigo-900 text-indigo-900' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900'}`}>
           <span className="text-2xl">{isSleeping ? '😴' : '👶'}</span>
           <span className={`font-semibold whitespace-nowrap ${(isSleeping ? sleepText : awakeText).length > 19 ? 'text-sm' : 'text-base'}`}>
         {isSleeping ? sleepText : awakeText}
@@ -175,7 +175,7 @@ export default function QuickButtons() {
         {/* layout of the Feed button - NOW OPENS MODAL */}
         <button 
           onClick={() => setShowFeedModal(true)} 
-          className="bg-green-200 hover:bg-green-300 active:scale-95 text-green-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className="bg-cyan-100 hover:bg-cyan-200 active:scale-95 text-cyan-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
         >
           <span className="text-2xl">🍼</span><span className="font-semibold">Feed</span>
         </button>
@@ -197,7 +197,7 @@ export default function QuickButtons() {
         {/* Layout of the Weight button */}
         <button 
           onClick={() => setShowWeightModal(true)}
-          className="bg-cyan-100 hover:bg-cyan-200 active:scale-95 text-cyan-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className="bg-green-200 hover:bg-green-300 active:scale-95 text-green-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
         >
           <span className="text-2xl">⚖️</span>
           <span className="font-semibold">Weight</span>
