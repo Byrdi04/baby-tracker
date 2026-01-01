@@ -11,12 +11,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
-      <header className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Baby Tracker 👶🏻</h1>
-        <span className="text-sm text-gray-500">
-          {new Date().toLocaleDateString()}
-        </span>
-      </header>
 
       {/* Buttons */}
       <QuickButtons />

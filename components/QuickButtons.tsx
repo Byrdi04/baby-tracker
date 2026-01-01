@@ -3,6 +3,42 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
+// HELPER FUNCTION: Calculate "Awake for X" text
+const getAwakeDuration = (lastSleepEnd: string | null): string => {
+  if (!lastSleepEnd) return 'Start Sleep';
+  
+  const endTime = new Date(lastSleepEnd).getTime();
+  const now = Date.now();
+  const diffMs = now - endTime;
+  
+  const totalMins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+
+  if (hours > 0) {
+    return `Awake for ${hours}h ${mins}m`;
+  }
+  return `Awake for ${mins}m`;
+};
+
+// HELPER FUNCTION: Calculate "Sleeping for X" text
+const getSleepDuration = (sleepStartTime: string | null): string => {
+  if (!sleepStartTime) return 'Wake Baby';
+  
+  const startTime = new Date(sleepStartTime).getTime();
+  const now = Date.now();
+  const diffMs = now - startTime;
+  
+  const totalMins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+
+  if (hours > 0) {
+    return `Sleeping for ${hours}h ${mins}m`;
+  }
+  return `Sleeping for ${mins}m`;
+};
+
 export default function QuickButtons() {
   const router = useRouter();
   
@@ -11,13 +47,24 @@ export default function QuickButtons() {
   const [medicineGiven, setMedicineGiven] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // State for tracking when baby last woke up
+  const [lastSleepEnd, setLastSleepEnd] = useState<string | null>(null);
+  const [awakeText, setAwakeText] = useState('Start Sleep');
+
+  // State for tracking when current sleep started
+  const [sleepStartTime, setSleepStartTime] = useState<string | null>(null);
+  const [sleepText, setSleepText] = useState('Wake Baby');
+
   // Weight Modal States
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [weightValue, setWeightValue] = useState('');
 
-  // Note Modal States (NEW)
+  // Note Modal States
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState('');
+
+  // NEW: Feed Modal State
+  const [showFeedModal, setShowFeedModal] = useState(false);
 
   // Fetch Status on Load
   useEffect(() => {
@@ -26,10 +73,33 @@ export default function QuickButtons() {
       .then(data => { 
         if (data.isSleeping) setIsSleeping(true);
         if (data.medicineGiven) setMedicineGiven(true);
+        if (data.lastSleepEnd) setLastSleepEnd(data.lastSleepEnd);
+        if (data.sleepStartTime) setSleepStartTime(data.sleepStartTime);
       });
   }, []);
 
-  // Updated handleLog to accept 'payload' AND 'noteContent'
+  // Update the "Awake for X" text every minute
+  useEffect(() => {
+    setAwakeText(getAwakeDuration(lastSleepEnd));
+
+    const interval = setInterval(() => {
+      setAwakeText(getAwakeDuration(lastSleepEnd));
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [lastSleepEnd]);
+
+  // Update the "Sleeping for X" text every minute
+  useEffect(() => {
+    setSleepText(getSleepDuration(sleepStartTime));
+
+    const interval = setInterval(() => {
+      setSleepText(getSleepDuration(sleepStartTime));
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [sleepStartTime]);
+
   const handleLog = async (type: string, payload: object = {}, noteContent: string | null = null) => {
     setLoading(true);
     try {
@@ -39,7 +109,7 @@ export default function QuickButtons() {
         body: JSON.stringify({ 
           type, 
           data: payload,
-          note: noteContent // Send the note text to the API
+          note: noteContent
         }),
       });
 
@@ -47,8 +117,15 @@ export default function QuickButtons() {
         const data = await response.json();
         
         if (type === 'SLEEP') {
-          if (data.status === 'started') setIsSleeping(true);
-          if (data.status === 'stopped') setIsSleeping(false);
+          if (data.status === 'started') {
+            setIsSleeping(true);
+            setSleepStartTime(new Date().toISOString());
+          }
+          if (data.status === 'stopped') {
+            setIsSleeping(false);
+            setSleepStartTime(null);
+            setLastSleepEnd(new Date().toISOString());
+          }
         }
         if (type === 'MEDICINE') {
             setMedicineGiven(true);
@@ -70,12 +147,17 @@ export default function QuickButtons() {
     setShowWeightModal(false);
   };
 
-  // NEW: Submit Note Function
   const submitNote = () => {
-    if (!noteText.trim()) return; // Don't save empty notes
-    handleLog('NOTE', {}, noteText); // Pass the text as the 3rd argument
+    if (!noteText.trim()) return;
+    handleLog('NOTE', {}, noteText);
     setNoteText('');
     setShowNoteModal(false);
+  };
+
+  // NEW: Submit Feed Function
+  const submitFeed = (feedType: string) => {
+    handleLog('FEED', { feedType: feedType });
+    setShowFeedModal(false);
   };
 
   return (
@@ -85,11 +167,14 @@ export default function QuickButtons() {
         {/* Sleep */}
         <button onClick={() => handleLog('SLEEP')} disabled={loading} className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${isSleeping ? 'bg-indigo-800 text-blue-100 ring-4 ring-indigo-300' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
           <span className="text-2xl">{isSleeping ? '😴' : '👶'}</span>
-          <span className="font-semibold">{isSleeping ? 'Wake Baby' : 'Start Sleep'}</span>
+          <span className="font-semibold">{isSleeping ? sleepText : awakeText}</span>
         </button>
         
-        {/* Feed */}
-        <button onClick={() => handleLog('FEED')} className="bg-pink-600 hover:bg-pink-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all">
+        {/* Feed - NOW OPENS MODAL */}
+        <button 
+          onClick={() => setShowFeedModal(true)} 
+          className="bg-pink-600 hover:bg-pink-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+        >
           <span className="text-2xl">🍼</span><span className="font-semibold">Feed</span>
         </button>
 
@@ -116,7 +201,7 @@ export default function QuickButtons() {
           <span className="font-semibold">Weight</span>
         </button>
 
-        {/* Note - NOW OPENS MODAL */}
+        {/* Note */}
         <button 
           onClick={() => setShowNoteModal(true)} 
           className="bg-gray-600 hover:bg-gray-700 active:scale-95 text-white p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
@@ -124,6 +209,48 @@ export default function QuickButtons() {
           <span className="text-xl">📝</span><span className="font-semibold">Note</span>
         </button>
       </section>
+
+      {/* --- FEED MODAL (NEW) --- */}
+      {showFeedModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-4 dark:text-white">What type of feeding?</h3>
+            
+            <div className="flex flex-col gap-3 mb-4">
+              <button 
+                onClick={() => submitFeed('Breastfeeding')}
+                className="p-4 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-100 rounded-xl font-semibold hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors flex items-center gap-3"
+              >
+                <span className="text-2xl">🤱</span>
+                Breastfeeding
+              </button>
+              
+              <button 
+                onClick={() => submitFeed('Bottle')}
+                className="p-4 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 rounded-xl font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-3"
+              >
+                <span className="text-2xl">🍼</span>
+                Bottle
+              </button>
+              
+              <button 
+                onClick={() => submitFeed('Solid food')}
+                className="p-4 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-100 rounded-xl font-semibold hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex items-center gap-3"
+              >
+                <span className="text-2xl">🥣</span>
+                Solid food
+              </button>
+            </div>
+
+            <button 
+              onClick={() => setShowFeedModal(false)}
+              className="w-full py-3 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* --- WEIGHT MODAL --- */}
       {showWeightModal && (
@@ -150,7 +277,7 @@ export default function QuickButtons() {
         </div>
       )}
 
-      {/* --- NOTE MODAL (NEW) --- */}
+      {/* --- NOTE MODAL --- */}
       {showNoteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-sm">

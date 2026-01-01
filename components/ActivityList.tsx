@@ -8,11 +8,10 @@ type EventRow = {
   type: string;
   startTime: string;
   endTime: string | null;
-  note: string | null; // <--- ADDED THIS FIELD
   data: string;
 };
 
-// HELPER 1: Input Format
+// 1. HELPER: Format for Input (HTML needs YYYY-MM-DDThh:mm)
 const toInputFormat = (dateStr: string) => {
   const date = new Date(dateStr);
   const offset = date.getTimezoneOffset() * 60000;
@@ -20,7 +19,7 @@ const toInputFormat = (dateStr: string) => {
   return localISOTime;
 };
 
-// HELPER 2: Display Time (European 24h)
+// 2. HELPER: Display Time (European 24h format: 14:30)
 const formatDisplayTime = (dateStr: string) => {
   return new Date(dateStr).toLocaleTimeString('en-GB', {
     hour: '2-digit',
@@ -29,16 +28,19 @@ const formatDisplayTime = (dateStr: string) => {
   });
 };
 
-// HELPER 3: Duration
+// 3. HELPER: Calculate Duration (e.g., "1h 30m")
 const getDurationString = (start: string, end: string) => {
   const diffMs = new Date(end).getTime() - new Date(start).getTime();
   const totalMins = Math.floor(diffMs / 60000);
+  
   const hours = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
+
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
 };
 
+// Styles helper
 const getEventStyle = (type: string) => {
   switch (type) {
     case 'SLEEP': return { icon: '😴', bg: 'bg-blue-100 dark:bg-blue-900' };
@@ -53,33 +55,51 @@ const getEventStyle = (type: string) => {
 export default function ActivityList({ initialEvents }: { initialEvents: EventRow[] }) {
   const router = useRouter();
   const [selectedEvent, setSelectedEvent] = useState<EventRow | null>(null);
+  
+  // Edit Form States
   const [editTime, setEditTime] = useState('');
   const [editValue, setEditValue] = useState(''); 
 
+  // Open Modal
   const handleRowClick = (event: EventRow) => {
     setSelectedEvent(event);
     setEditTime(toInputFormat(event.startTime));
+    
     const dataObj = JSON.parse(event.data || '{}');
     if (dataObj.amount) setEditValue(dataObj.amount);
     else setEditValue('');
   };
 
+  // DELETE Action
   const handleDelete = async () => {
     if (!selectedEvent) return;
     if (!confirm("Are you sure you want to delete this?")) return;
-    await fetch('/api/events', { method: 'DELETE', body: JSON.stringify({ id: selectedEvent.id }) });
+
+    await fetch('/api/events', {
+      method: 'DELETE',
+      body: JSON.stringify({ id: selectedEvent.id }),
+    });
+
     setSelectedEvent(null);
     router.refresh(); 
   };
 
+  // SAVE (Update) Action
   const handleSave = async () => {
     if (!selectedEvent) return;
+
     const currentData = JSON.parse(selectedEvent.data || '{}');
     if (editValue) currentData.amount = editValue; 
+
     await fetch('/api/events', {
       method: 'PATCH',
-      body: JSON.stringify({ id: selectedEvent.id, startTime: editTime, data: currentData }),
+      body: JSON.stringify({
+        id: selectedEvent.id,
+        startTime: editTime, 
+        data: currentData    
+      }),
     });
+
     setSelectedEvent(null);
     router.refresh();
   };
@@ -94,35 +114,36 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
             const style = getEventStyle(event.type);
             const eventData = JSON.parse(event.data || '{}');
             
-            // --- DECIDE THE SUB-TEXT ---
+            // --- LOGIC CHANGE 1: Handle the "subText" ---
             let subText = "Logged"; 
             
-            // 1. If Sleep: empty
+            // If it is sleep, we don't want to say "Logged", so we empty it
             if (event.type === 'SLEEP') subText = ""; 
             
-            // 2. If Weight: show value
+            // Specific overrides for Weight
             if (event.type === 'WEIGHT' && eventData.amount) subText = `${eventData.amount} kg`;
+
+            // NEW: Specific overrides for Feed
+            if (event.type === 'FEED' && eventData.feedType) subText = eventData.feedType;
             
-            // 3. If NOTE: Show the actual note text!
-            // 'truncate' class in CSS will cut it off with "..." if it's too long
-            if (event.type === 'NOTE' && event.note) {
-                subText = event.note; 
-            }
-            
-            // --- TIME AND DURATION ---
+            // --- LOGIC CHANGE 2: Handle Time and "Sleeping since..." ---
             let timeDisplay = formatDisplayTime(event.startTime);
             let durationBadge = null;
 
             if (event.type === 'SLEEP') {
               if (event.endTime) {
+                // FINISHED SLEEPING
                 timeDisplay = `${formatDisplayTime(event.startTime)} - ${formatDisplayTime(event.endTime)}`;
                 const duration = getDurationString(event.startTime, event.endTime);
+                
                 durationBadge = (
                   <span className="ml-2 px-2 py-0.5 rounded text-xs font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-200">
                     {duration}
                   </span>
                 );
               } else {
+                // ACTIVELY SLEEPING (ONGOING)
+                // Here is where we change the text to include the start time
                 timeDisplay = `💤 Sleeping since ${formatDisplayTime(event.startTime)}`;
               }
             }
@@ -133,26 +154,18 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                 onClick={() => handleRowClick(event)} 
                 className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <div className="flex items-center gap-3 overflow-hidden"> 
-                  {/* Added overflow-hidden above to help with long notes */}
-                  
-                  <span className={`${style.bg} p-2 rounded-full text-lg flex-shrink-0`}>{style.icon}</span>
-                  
-                  <div className="min-w-0"> {/* min-w-0 ensures text truncation works */}
-                    <p className="font-medium capitalize flex items-center whitespace-nowrap">
+                <div className="flex items-center gap-3">
+                  <span className={`${style.bg} p-2 rounded-full text-lg`}>{style.icon}</span>
+                  <div>
+                    <p className="font-medium capitalize flex items-center">
                       {event.type.toLowerCase()}
                       {durationBadge}
                     </p>
-                    
-                    {/* Render the subText (Note content) with truncation */}
-                    {subText && (
-                        <p className="text-xs text-gray-500 truncate pr-2">
-                            {subText}
-                        </p>
-                    )}
+                    {/* Only show the subText paragraph if subText is not empty */}
+                    {subText && <p className="text-xs text-gray-500">{subText}</p>}
                   </div>
                 </div>
-                <span className="text-sm text-gray-400 whitespace-nowrap flex-shrink-0">{timeDisplay}</span>
+                <span className="text-sm text-gray-400 whitespace-nowrap">{timeDisplay}</span>
               </div>
             );
           })
