@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import db from '@/lib/db';
 
 export async function POST(request: Request) {
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
           INSERT INTO events (type, startTime, data)
           VALUES (?, ?, ?)
         `).run('SLEEP', new Date().toISOString(), JSON.stringify({}));
+
+        // After successful write:
+        revalidatePath('/');
 
         return NextResponse.json({ status: 'started', id: info.lastInsertRowid });
       }
@@ -111,6 +115,7 @@ export async function DELETE(request: Request) {
     const stmt = db.prepare('DELETE FROM events WHERE id = ?');
     stmt.run(id);
 
+    revalidatePath('/');
     return NextResponse.json({ success: true });
   } catch (error) {
     return new NextResponse("Error deleting", { status: 500 });

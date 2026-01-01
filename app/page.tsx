@@ -1,6 +1,7 @@
 import db from '@/lib/db';
 import QuickButtons from '@/components/QuickButtons';
 import ActivityList from '@/components/ActivityList'; // Import the new component
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   // 1. FETCH DATA (Server Side)
