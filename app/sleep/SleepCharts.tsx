@@ -32,7 +32,7 @@ export default function SleepCharts({ chartData, hourlyData }: Props) {
               <XAxis dataKey="date" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} unit="h" />
               <Tooltip 
-                formatter={(value: number) => [`${value} hours`, 'Sleep']}
+                formatter={(value) => [`${value} hours`, 'Sleep']}
                 contentStyle={{ borderRadius: '8px' }}
               />
               <Bar dataKey="hours" fill="#6366f1" radius={[4, 4, 0, 0]} />
@@ -56,7 +56,7 @@ export default function SleepCharts({ chartData, hourlyData }: Props) {
               />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip 
-                formatter={(value: number) => [`${value} times`, 'Started sleep']}
+                formatter={(value) => [`${value} times`, 'Started sleep']}
                 contentStyle={{ borderRadius: '8px' }}
               />
               <Bar dataKey="count" fill="#a855f7" radius={[4, 4, 0, 0]} />

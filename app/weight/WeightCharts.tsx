@@ -38,7 +38,7 @@ export default function WeightCharts({ chartData }: Props) {
                   domain={['dataMin - 0.5', 'dataMax + 0.5']}
                 />
                 <Tooltip 
-                  formatter={(value: number) => [`${value} kg`, 'Weight']}
+                  formatter={(value) => [`${value} kg`, 'Weight']}
                   contentStyle={{ borderRadius: '8px' }}
                 />
                 <ReferenceLine 

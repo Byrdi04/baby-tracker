@@ -24,7 +24,7 @@ export default function FeedCharts({ chartData }: Props) {
               <XAxis dataKey="date" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
               <Tooltip 
-                formatter={(value: number) => [`${value} feeds`, 'Total']}
+                formatter={(value) => [`${value} feeds`, 'Total']}
                 contentStyle={{ borderRadius: '8px' }}
               />
               <Bar dataKey="feeds" fill="#22c55e" radius={[4, 4, 0, 0]} />
