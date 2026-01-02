@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import db from '@/lib/db';
 import SleepCharts from './SleepCharts';
+import SleepTimeline from '@/components/SleepTimeline'; 
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -196,6 +197,60 @@ export default function SleepPage() {
     count
   }));
 
+  // ========== 4. TIMELINE CHART DATA ==========
+  
+  // Create a list of the last 7 dates
+  const timelineData = [];
+  const today = new Date();
+  // We want to handle "7am start" logic, so we shift "Today" if it's before 7am
+  if (today.getHours() < 7) today.setDate(today.getDate() - 1);
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    
+    // Find events for this specific date (using your existing getDateKey logic)
+    const daysEvents = completedSleeps.filter(e => getDateKey(e.startTime) === dateStr);
+    
+    // Calculate Blocks
+    const blocks = daysEvents.map(e => {
+      const start = new Date(e.startTime);
+      const end = new Date(e.endTime);
+
+      // 1. Calculate Positioning (Existing Logic)
+      let startHours = start.getHours() + (start.getMinutes() / 60);
+      let endHours = end.getHours() + (end.getMinutes() / 60);
+
+      if (startHours < 7) startHours += 24;
+      if (endHours < 7) endHours += 24;
+      
+      const relativeStart = startHours - 7;
+      const durationVal = endHours - startHours;
+
+      const left = (relativeStart / 24) * 100;
+      const width = (durationVal / 24) * 100;
+      const isNight = startHours >= 18; 
+
+      // 2. NEW: Prepare Display Text
+      const timeStr = `${formatTime(e.startTime)} - ${formatTime(e.endTime)}`;
+      const durationStr = getDuration(e.startTime, e.endTime);
+
+      return { 
+        left, 
+        width, 
+        isNight,
+        // 👇 Pass these new strings to the component
+        info: { time: timeStr, duration: durationStr } 
+      };
+    });
+
+    timelineData.push({
+      date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
+      blocks
+    });
+  }
+
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
@@ -259,7 +314,11 @@ export default function SleepPage() {
       </section>
 
       {/* Charts (Client Component) */}
-      <SleepCharts chartData={chartData} hourlyData={hourlyData} />
+
+      {/* 1. The Timeline (New) */}
+      <SleepTimeline data={timelineData} />
+      {/* 2. The Graphs (Modified) */}
+      <SleepCharts chartData={chartData} />
 
       {/* Sleep List */}
       <section className="space-y-3">
