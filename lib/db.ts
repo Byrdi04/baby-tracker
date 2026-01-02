@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs'; // 👈 NEW: Need to import 'fs'
 
 // 1. Define path to the data directory and database file
-const dataDir = path.resolve('data'); // Path to the data directory
+const dataDir = path.join(process.cwd(), 'data'); // Path will be /app/data
 const dbPath = path.join(dataDir, 'baby-tracker.db'); // Full path to DB file
 
 // 2. Ensure the data directory exists
