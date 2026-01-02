@@ -32,7 +32,7 @@ export default function DiaperCharts({ dailyChartData, weeklyChartData }: Props)
               <XAxis dataKey="date" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
               <Tooltip 
-                formatter={(value: number) => [`${value} changes`, 'Total']}
+                formatter={(value) => [`${value} changes`, 'Total']}
                 contentStyle={{ borderRadius: '8px' }}
               />
               <Bar dataKey="changes" fill="#f97316" radius={[4, 4, 0, 0]} />
@@ -52,7 +52,7 @@ export default function DiaperCharts({ dailyChartData, weeklyChartData }: Props)
               <XAxis dataKey="week" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
               <Tooltip 
-                formatter={(value: number) => [`${value} changes`, 'Total']}
+                formatter={(value) => [`${value} changes`, 'Total']}
                 contentStyle={{ borderRadius: '8px' }}
               />
               <Bar dataKey="changes" fill="#f59e0b" radius={[4, 4, 0, 0]} />
