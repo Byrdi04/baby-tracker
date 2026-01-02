@@ -5,9 +5,10 @@ services:
       - "3000:3000"
     # Volume for persistent SQLite database
     volumes:
-      - ./data:/app/data   # Maps your local data/ folder to the container
+      - ./data:/app/data # Maps your local data/ folder to the container
     environment:
       - NODE_ENV=development # Use development mode for local testing
+      - TZ=Europe/Copenhagen
     # Optional: If you need to inspect the DB during development
     # stdin_open: true
     # tty: true
