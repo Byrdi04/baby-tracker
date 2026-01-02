@@ -58,12 +58,19 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
   
   // Edit Form States
   const [editTime, setEditTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
   const [editValue, setEditValue] = useState(''); 
 
   // Open Modal
   const handleRowClick = (event: EventRow) => {
     setSelectedEvent(event);
     setEditTime(toInputFormat(event.startTime));
+
+    if (event.endTime) {
+      setEditEndTime(toInputFormat(event.endTime));
+    } else {
+      setEditEndTime(''); // Clear it if there is no end time
+    }
     
     const dataObj = JSON.parse(event.data || '{}');
     if (dataObj.amount) setEditValue(dataObj.amount);
@@ -96,6 +103,7 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
       body: JSON.stringify({
         id: selectedEvent.id,
         startTime: editTime, 
+        endTime: editEndTime || null, // 👈 ADD THIS LINE: Send the time, or null if empty
         data: currentData    
       }),
     });
@@ -176,6 +184,20 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
               onChange={(e) => setEditTime(e.target.value)}
               className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
+
+            {/* 👈 START OF NEW CODE: End Time Input */}
+            {selectedEvent.type === 'SLEEP' && (
+              <>
+                <label className="block text-sm text-gray-500 mb-1">End Time</label>
+                <input 
+                  type="datetime-local"
+                  value={editEndTime}
+                  onChange={(e) => setEditEndTime(e.target.value)}
+                  className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </>
+            )}
+            {/* 👈 END OF NEW CODE */}
 
             {(selectedEvent.type === 'WEIGHT' || editValue !== '') && (
               <>

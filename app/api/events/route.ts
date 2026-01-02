@@ -135,17 +135,22 @@ export async function DELETE(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, startTime, data } = body;
+    
+    // 1. We now extract 'endTime' from the body as well
+    const { id, startTime, endTime, data } = body;
 
-    // We allow updating Start Time and Data (e.g. weight amount)
+    // 2. Update the SQL query to include 'endTime = ?'
     const stmt = db.prepare(`
       UPDATE events 
-      SET startTime = ?, data = ?
+      SET startTime = ?, endTime = ?, data = ?
       WHERE id = ?
     `);
 
+    // 3. Run the query with the new variables
+    // We check if endTime exists; if yes, format it to ISO string. If no, save as null.
     stmt.run(
       new Date(startTime).toISOString(), 
+      endTime ? new Date(endTime).toISOString() : null, 
       JSON.stringify(data || {}), 
       id
     );
