@@ -11,15 +11,14 @@ type EventRow = {
   data: string;
 };
 
-// 1. HELPER: Format for Input (HTML needs YYYY-MM-DDThh:mm)
+// 1. HELPER: Format for Input
 const toInputFormat = (dateStr: string) => {
   const date = new Date(dateStr);
   const offset = date.getTimezoneOffset() * 60000;
-  const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
-  return localISOTime;
+  return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
 };
 
-// 2. HELPER: Display Time (European 24h format: 14:30)
+// 2. HELPER: Display Time
 const formatDisplayTime = (dateStr: string) => {
   return new Date(dateStr).toLocaleTimeString('en-GB', {
     hour: '2-digit',
@@ -28,19 +27,15 @@ const formatDisplayTime = (dateStr: string) => {
   });
 };
 
-// 3. HELPER: Calculate Duration (e.g., "1h 30m")
+// 3. HELPER: Duration String
 const getDurationString = (start: string, end: string) => {
   const diffMs = new Date(end).getTime() - new Date(start).getTime();
   const totalMins = Math.floor(diffMs / 60000);
-  
   const hours = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
-
-  if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 };
 
-// Styles helper
 const getEventStyle = (type: string) => {
   switch (type) {
     case 'SLEEP': return { icon: '😴', bg: 'bg-blue-100 dark:bg-blue-900' };
@@ -56,45 +51,65 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
   const router = useRouter();
   const [selectedEvent, setSelectedEvent] = useState<EventRow | null>(null);
   
-  // Edit Form States
   const [editTime, setEditTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editValue, setEditValue] = useState(''); 
 
-  // Open Modal
+  // HELPER: Calculate Weight Stats (Updated Return Type)
+  const getWeightStats = (currentEvent: EventRow, index: number) => {
+    const prevEvent = initialEvents.slice(index + 1).find(e => e.type === 'WEIGHT');
+    if (!prevEvent) return null;
+
+    const currentData = JSON.parse(currentEvent.data || '{}');
+    const prevData = JSON.parse(prevEvent.data || '{}');
+    
+    const currentVal = parseFloat(currentData.amount);
+    const prevVal = parseFloat(prevData.amount);
+
+    if (isNaN(currentVal) || isNaN(prevVal)) return null;
+
+    // Diff Logic
+    const diffKg = currentVal - prevVal;
+    
+    // Time Logic
+    const currTime = new Date(currentEvent.startTime).getTime();
+    const prevTime = new Date(prevEvent.startTime).getTime();
+    const daysDiff = (currTime - prevTime) / (1000 * 3600 * 24); 
+
+    if (daysDiff < 0.001) return null;
+
+    // Rate Logic
+    const diffGrams = diffKg * 1000;
+    const gPerDay = Math.round(diffGrams / daysDiff);
+    const sign = gPerDay > 0 ? '+' : ''; 
+
+    // Return Object instead of String
+    return {
+      text: `(${sign}${gPerDay} g/day)`,
+      isGain: diffKg >= 0
+    };
+  };
+
   const handleRowClick = (event: EventRow) => {
     setSelectedEvent(event);
     setEditTime(toInputFormat(event.startTime));
-
-    if (event.endTime) {
-      setEditEndTime(toInputFormat(event.endTime));
-    } else {
-      setEditEndTime(''); // Clear it if there is no end time
-    }
-    
+    setEditEndTime(event.endTime ? toInputFormat(event.endTime) : '');
     const dataObj = JSON.parse(event.data || '{}');
-    if (dataObj.amount) setEditValue(dataObj.amount);
-    else setEditValue('');
+    setEditValue(dataObj.amount || '');
   };
 
-  // DELETE Action
   const handleDelete = async () => {
-    if (!selectedEvent) return;
-    if (!confirm("Are you sure you want to delete this?")) return;
-
+    if (!selectedEvent || !confirm("Delete this?")) return;
     await fetch('/api/events', {
       method: 'DELETE',
       body: JSON.stringify({ id: selectedEvent.id }),
     });
-
     setSelectedEvent(null);
     router.refresh(); 
   };
 
-  // SAVE (Update) Action
   const handleSave = async () => {
     if (!selectedEvent) return;
-
     const currentData = JSON.parse(selectedEvent.data || '{}');
     if (editValue) currentData.amount = editValue; 
 
@@ -103,11 +118,10 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
       body: JSON.stringify({
         id: selectedEvent.id,
         startTime: editTime, 
-        endTime: editEndTime || null, // 👈 ADD THIS LINE: Send the time, or null if empty
+        endTime: editEndTime || null, 
         data: currentData    
       }),
     });
-
     setSelectedEvent(null);
     router.refresh();
   };
@@ -118,32 +132,32 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
         {initialEvents.length === 0 ? (
           <p className="text-gray-400 text-center italic mt-10">No events logged yet.</p>
         ) : (
-          initialEvents.map((event) => {
+          initialEvents.map((event, index) => {
             const style = getEventStyle(event.type);
             const eventData = JSON.parse(event.data || '{}');
             
-            // --- LOGIC CHANGE 1: Handle the "subText" ---
             let subText = ""; 
-            
-            // Specific overrides for Weight
-            if (event.type === 'WEIGHT' && eventData.amount) subText = `${eventData.amount} kg`;
+            // 👈 NEW: Variable to hold the styled stat object
+            let weightStat: { text: string; isGain: boolean } | null = null;
 
-            // NEW: Specific overrides for Feed
+            // WEIGHT LOGIC
+            if (event.type === 'WEIGHT' && eventData.amount) {
+               subText = `${eventData.amount} kg`;
+               weightStat = getWeightStats(event, index);
+            }
+
+            // FEED LOGIC
             if (event.type === 'FEED' && eventData.feedType) subText = eventData.feedType;
             
-            // --- LOGIC CHANGE 2: Handle Time and "Sleeping since..." ---
+            // SLEEP LOGIC
             let timeDisplay = formatDisplayTime(event.startTime);
-
             if (event.type === 'SLEEP') {
-            if (event.endTime) {
-                // FINISHED SLEEPING
-                timeDisplay = `${formatDisplayTime(event.startTime)} - ${formatDisplayTime(event.endTime)}`;
-                const duration = getDurationString(event.startTime, event.endTime);
-                subText = duration; // Show duration as subText
-            } else {
-                // ACTIVELY SLEEPING (ONGOING)
-                timeDisplay = `💤 Sleeping since ${formatDisplayTime(event.startTime)}`;
-            }
+                if (event.endTime) {
+                    timeDisplay = `${formatDisplayTime(event.startTime)} - ${formatDisplayTime(event.endTime)}`;
+                    subText = getDurationString(event.startTime, event.endTime); 
+                } else {
+                    timeDisplay = `💤 Sleeping since ${formatDisplayTime(event.startTime)}`;
+                }
             }
 
             return (
@@ -155,11 +169,24 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                 <div className="flex items-center gap-3">
                   <span className={`${style.bg} p-2 rounded-full text-lg`}>{style.icon}</span>
                   <div>
-                    <p className="font-medium capitalize">
-                    {event.type.toLowerCase()}
-                    </p>
-                    {/* Only show the subText paragraph if subText is not empty */}
-                    {subText && <p className="text-xs text-gray-500">{subText}</p>}
+                    <p className="font-medium capitalize">{event.type.toLowerCase()}</p>
+                    
+                    {/* 👇 UPDATED DISPLAY LOGIC */}
+                    {(subText || weightStat) && (
+                      <p className="text-xs text-gray-500">
+                        {subText}
+                        {weightStat && (
+                          <span className={`ml-1 ${
+                            weightStat.isGain 
+                              ? 'text-green-700 dark:text-green-400' 
+                              : 'text-red-700 dark:text-red-400'
+                          }`}>
+                            {weightStat.text}
+                          </span>
+                        )}
+                      </p>
+                    )}
+
                   </div>
                 </div>
                 <span className="text-sm text-gray-400 whitespace-nowrap">{timeDisplay}</span>
@@ -169,68 +196,34 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
         )}
       </div>
 
-      {/* --- EDIT MODAL (Unchanged) --- */}
+      {/* MODAL (Unchanged) */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4 dark:text-white">
-              Edit {selectedEvent.type.toLowerCase()}
-            </h3>
-
+            <h3 className="text-lg font-bold mb-4 dark:text-white">Edit {selectedEvent.type.toLowerCase()}</h3>
+            
             <label className="block text-sm text-gray-500 mb-1">Time</label>
-            <input 
-              type="datetime-local"
-              value={editTime}
-              onChange={(e) => setEditTime(e.target.value)}
-              className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            />
+            <input type="datetime-local" value={editTime} onChange={(e) => setEditTime(e.target.value)} className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
 
-            {/* 👈 START OF NEW CODE: End Time Input */}
             {selectedEvent.type === 'SLEEP' && (
               <>
                 <label className="block text-sm text-gray-500 mb-1">End Time</label>
-                <input 
-                  type="datetime-local"
-                  value={editEndTime}
-                  onChange={(e) => setEditEndTime(e.target.value)}
-                  className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
+                <input type="datetime-local" value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
               </>
             )}
-            {/* 👈 END OF NEW CODE */}
 
             {(selectedEvent.type === 'WEIGHT' || editValue !== '') && (
               <>
                 <label className="block text-sm text-gray-500 mb-1">Value (kg/ml)</label>
-                <input 
-                  type="number"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="w-full p-3 mb-6 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
+                <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="w-full p-3 mb-6 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
               </>
             )}
 
             <div className="flex gap-3 mt-4">
-              <button 
-                onClick={handleDelete}
-                className="px-4 py-3 bg-red-100 text-red-600 font-bold rounded-lg hover:bg-red-200"
-              >
-                Delete
-              </button>
+              <button onClick={handleDelete} className="px-4 py-3 bg-red-100 text-red-600 font-bold rounded-lg hover:bg-red-200">Delete</button>
               <div className="flex-1 flex gap-2">
-                <button 
-                  onClick={() => setSelectedEvent(null)}
-                  className="flex-1 py-3 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSave}
-                  className="flex-1 py-3 bg-cyan-600 text-white font-bold rounded-lg hover:bg-cyan-700"
-                >
-                  Save
-                </button>
+                <button onClick={() => setSelectedEvent(null)} className="flex-1 py-3 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+                <button onClick={handleSave} className="flex-1 py-3 bg-cyan-600 text-white font-bold rounded-lg hover:bg-cyan-700">Save</button>
               </div>
             </div>
           </div>

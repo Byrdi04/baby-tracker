@@ -23,6 +23,7 @@
 
 body {
   background: var(--background);
+  @apply dark:bg-black dark:text-gray-100; 
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }

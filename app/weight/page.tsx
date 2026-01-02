@@ -78,9 +78,8 @@ export default function WeightPage() {
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
       {/* Header */}
-      <header className="mb-6">
+      <header className="mb-4">
         <h1 className="text-2xl font-bold">⚖️ Weight Log</h1>
-        <p className="text-gray-500 text-sm">Weight tracking and growth</p>
       </header>
 
       {/* Statistics Cards */}

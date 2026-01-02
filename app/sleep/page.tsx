@@ -255,9 +255,8 @@ export default function SleepPage() {
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
       {/* Header */}
-      <header className="mb-6">
+      <header className="mb-4">
         <h1 className="text-2xl font-bold">😴 Sleep Log</h1>
-        <p className="text-gray-500 text-sm">Sleep tracking and statistics</p>
       </header>
 
       {/* Statistics Cards */}
@@ -293,20 +292,20 @@ export default function SleepPage() {
       {/* 👇 NEW SECTION: Bedtime & Wake Up */}
       <section className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-xl">
-          <p className="text-yellow-600 dark:text-yellow-300 text-sm font-medium">Average Wake Up Time</p>
+          <p className="text-yellow-800 dark:text-yellow-300 text-sm font-medium">Wake Up Time</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl">☀️</span>
-            <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+            <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-100">
               {medianWakeTime}
             </p>
           </div>
         </div>
 
         <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded-xl">
-          <p className="text-orange-600 dark:text-orange-300 text-sm font-medium">Avgerage Bedtime</p>
+          <p className="text-orange-800 dark:text-orange-300 text-sm font-medium">Bedtime</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl">🛌</span>
-            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+            <p className="text-2xl font-bold text-orange-800 dark:text-orange-100">
               {medianBedTime}
             </p>
           </div>
