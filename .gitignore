@@ -47,3 +47,4 @@ next-env.d.ts
 baby-tracker.db
 baby-tracker.db-shm
 baby-tracker.db-wal
+*.xlsx
