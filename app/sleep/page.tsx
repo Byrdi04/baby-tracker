@@ -73,7 +73,12 @@ const getDateKey = (dateStr: string): string => {
     date.setDate(date.getDate() - 1);
   }
   
-  return date.toISOString().split('T')[0];
+  // FIX: Use LOCAL values, not ISO (UTC), to prevent timezone shifts
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };
 
 export default function SleepPage() {
@@ -199,26 +204,28 @@ export default function SleepPage() {
 
   // ========== 4. TIMELINE CHART DATA ==========
   
-  // Create a list of the last 7 dates
   const timelineData = [];
   const today = new Date();
-  // We want to handle "7am start" logic, so we shift "Today" if it's before 7am
   if (today.getHours() < 7) today.setDate(today.getDate() - 1);
 
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
     
-    // Find events for this specific date (using your existing getDateKey logic)
+    // FIX: Generate the comparison string using LOCAL time
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    // Find events for this specific date
     const daysEvents = completedSleeps.filter(e => getDateKey(e.startTime) === dateStr);
     
-    // Calculate Blocks
+    // ... (The rest of the calculation stays exactly the same) ...
     const blocks = daysEvents.map(e => {
       const start = new Date(e.startTime);
       const end = new Date(e.endTime);
 
-      // 1. Calculate Positioning (Existing Logic)
       let startHours = start.getHours() + (start.getMinutes() / 60);
       let endHours = end.getHours() + (end.getMinutes() / 60);
 
@@ -232,7 +239,6 @@ export default function SleepPage() {
       const width = (durationVal / 24) * 100;
       const isNight = startHours >= 18; 
 
-      // 2. NEW: Prepare Display Text
       const timeStr = `${formatTime(e.startTime)} - ${formatTime(e.endTime)}`;
       const durationStr = getDuration(e.startTime, e.endTime);
 
@@ -240,7 +246,6 @@ export default function SleepPage() {
         left, 
         width, 
         isNight,
-        // 👇 Pass these new strings to the component
         info: { time: timeStr, duration: durationStr } 
       };
     });
@@ -290,7 +295,7 @@ export default function SleepPage() {
       </section>
 
       {/* 👇 NEW SECTION: Bedtime & Wake Up */}
-      <section className="grid grid-cols-2 gap-4 mb-6">
+      <section className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-xl">
           <p className="text-yellow-800 dark:text-yellow-300 text-sm font-medium">Wake Up Time</p>
           <div className="flex items-baseline gap-2">

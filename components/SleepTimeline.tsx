@@ -48,8 +48,8 @@ export default function SleepTimeline({ data }: { data: DayRow[] }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
+      <h3 className="text-sm text-slate-700 dark:text-slate-300 mb-4">
         Sleep Schedule
       </h3>
 
@@ -62,7 +62,7 @@ export default function SleepTimeline({ data }: { data: DayRow[] }) {
                 {day.date}
               </div>
 
-              <div className="flex-1 h-8 bg-gray-50 dark:bg-gray-700 rounded-full relative">
+              <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded-full relative">
                 
                 {gridMarkers.map((left) => (
                    <div key={left} className="absolute top-0 bottom-0 border-l border-dashed border-gray-200 dark:border-gray-600" style={{ left }} />

@@ -16,8 +16,8 @@ export default function SleepCharts({ chartData}: Props) {
     <section className="mb-6 space-y-6">
       
       {/* Daily Sleep Chart */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
+        <h3 className="text-sm text-slate-700 dark:text-slate-300 mb-4">
           Sleep per Day (Last 7 Days)
         </h3>
         <div className="h-48">
