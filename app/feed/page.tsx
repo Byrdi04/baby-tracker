@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import db from '@/lib/db';
 import FeedCharts from './FeedCharts';
+import FeedTimeline from '@/components/FeedTimeline';
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -106,6 +107,57 @@ export default function FeedPage() {
       feeds: count
     }));
 
+      // ========== 5. TIMELINE DATA (Last 7 Days) ==========
+  const timelineData = [];
+  const today = new Date();
+  
+  // Adjust for 7am cycle: if currently before 7am, treat as "yesterday"
+  if (today.getHours() < 7) today.setDate(today.getDate() - 1);
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    
+    // We need to match events that belong to this "7am to 7am" cycle
+    // We reuse getDateKey logic if it handles the 7am shift correctly, 
+    // OR we do a manual filter for precision. Let's do manual filter to be safe.
+    
+    // Define the window for this day: 7am on Day X to 7am on Day X+1
+    const cycleStart = new Date(d); 
+    cycleStart.setHours(7, 0, 0, 0);
+    
+    const cycleEnd = new Date(cycleStart);
+    cycleEnd.setDate(cycleEnd.getDate() + 1);
+
+    const dayPoints = feedEvents
+      .filter(e => {
+        const time = new Date(e.startTime).getTime();
+        return time >= cycleStart.getTime() && time < cycleEnd.getTime();
+      })
+      .map(e => {
+        const start = new Date(e.startTime);
+        const data = JSON.parse(e.data || '{}');
+        
+        // Calculate Position relative to 7am
+        let hours = start.getHours() + (start.getMinutes() / 60);
+        if (hours < 7) hours += 24; // Handle 00:00 - 07:00 as "next day" hours (24-31)
+        
+        const relativeHours = hours - 7;
+        const left = (relativeHours / 24) * 100;
+
+        return {
+          left,
+          type: data.feedType || 'Unknown',
+          time: formatTime(e.startTime)
+        };
+      });
+
+    timelineData.push({
+      date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
+      points: dayPoints
+    });
+  }
+
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
@@ -151,6 +203,9 @@ export default function FeedPage() {
           })}
         </div>
       </section>
+
+      {/* NEW: Feed Timeline */}
+      <FeedTimeline data={timelineData} />
 
       {/* Charts (Client Component) */}
       <FeedCharts chartData={chartData} />
