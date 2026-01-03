@@ -14,8 +14,8 @@ type Props = {
 export default function FeedCharts({ chartData }: Props) {
   return (
     <section className="mb-6">
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
+        <h3 className="text-sm text-slate-700 dark:text-slate-300 mb-4">
           Feeds per Day (Last 7 Days)
         </h3>
         <div className="h-48">

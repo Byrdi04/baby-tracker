@@ -31,11 +31,11 @@ const getDateKey = (dateStr: string): string => {
 const getFeedStyle = (feedType: string) => {
   switch (feedType) {
     case 'Breastfeeding':
-      return { icon: '🤱', bg: 'bg-pink-100 dark:bg-pink-900', text: 'text-pink-800 dark:text-pink-100' };
+      return { icon: '🤱', bg: 'bg-yellow-100 dark:bg-pink-900', text: 'text-yellow-900 dark:text-pink-100' };
     case 'Bottle':
       return { icon: '🍼', bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-800 dark:text-blue-100' };
     case 'Solid food':
-      return { icon: '🥣', bg: 'bg-orange-100 dark:bg-orange-900', text: 'text-orange-800 dark:text-orange-100' };
+      return { icon: '🥣', bg: 'bg-green-100 dark:bg-orange-900', text: 'text-green-900 dark:text-orange-100' };
     default:
       return { icon: '🍼', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-100' };
   }
@@ -167,24 +167,24 @@ export default function FeedPage() {
       </header>
 
       {/* Statistics Cards */}
-      <section className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-green-50 dark:bg-green-900 p-4 rounded-xl">
-          <p className="text-green-600 dark:text-green-300 text-sm font-medium">Feeds per Day</p>
-          <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+      <section className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-violet-50 dark:bg-violet-900 p-4 rounded-xl">
+          <p className="text-violet-800 dark:text-violet-300 text-sm font-medium">Feeds per Day</p>
+          <p className="text-2xl font-bold text-violet-800 dark:text-violet-100">
             {avgFeedsPerDay}
           </p>
         </div>
         <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-xl">
-          <p className="text-blue-600 dark:text-blue-300 text-sm font-medium">Time Between Feeds</p>
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+          <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">Time Between Feeds</p>
+          <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
             {avgGapHours}h {avgGapMins}m
           </p>
         </div>
       </section>
 
       {/* Feed Type Breakdown */}
-      <section className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+      <section className="bg-slate-50 dark:bg-gray-800 p-4 rounded-xl dark:border-gray-700 mb-4">
+        <h3 className="text-sm text-slate-700 dark:text-gray-300 mb-3">
           Feed Type Breakdown
         </h3>
         <div className="flex gap-2 flex-wrap">
