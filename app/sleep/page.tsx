@@ -16,6 +16,7 @@ const formatTime = (dateStr: string) => {
 // Helper: Convert decimal hour to HH:MM (e.g. 6.5 -> 06:30)
 const decimalToTime = (decimal: number) => {
   if (!decimal && decimal !== 0) return '--:--';
+  if (decimal >= 24) decimal -= 24; // 👈 Handles the midnight wrap
   const hours = Math.floor(decimal);
   const minutes = Math.round((decimal - hours) * 60);
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
@@ -117,57 +118,110 @@ export default function SleepPage() {
   const medianNapHours = Math.floor(medianNap / 60);
   const medianNapMins = Math.round(medianNap % 60);
 
-  // ========== 3. NIGHT SLEEP LOGIC (Updated) ==========
+  // ========== 3. NIGHT SLEEP LOGIC (Synced with Timeline Rules) ==========
   
   const sortedSleeps = [...completedSleeps].sort((a, b) => 
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
 
   const nightSessions: number[] = [];
-  const bedTimes: number[] = [];   // 👈 NEW: Store bedtimes (e.g. 19.5 for 19:30)
-  const wakeUpTimes: number[] = []; // 👈 NEW: Store wake times (e.g. 6.25 for 06:15)
-  
-  if (sortedSleeps.length > 0) {
-    let currentSession = { 
-      start: new Date(sortedSleeps[0].startTime), 
-      end: new Date(sortedSleeps[0].endTime) 
-    };
+  const bedTimes: number[] = []; 
+  const wakeUpTimes: number[] = [];
 
-    const processSession = (session: { start: Date, end: Date }) => {
-      const startHour = session.start.getHours();
-      const endHour = session.end.getHours();
-      
-      // Logic: Starts 18-22 AND Ends 05-08
-      const validStart = startHour >= 18 && startHour <= 22;
-      const validEnd = endHour >= 5 && endHour <= 8;
+  // We process the entire list of 500 events to find "Night Chains"
+  let chainStartEvent = null;
+  let chainEndEvent = null;
+  let isChainActive = false;
 
-      if (validStart && validEnd) {
-        // 1. Duration
-        const durationMins = (session.end.getTime() - session.start.getTime()) / 60000;
-        nightSessions.push(durationMins);
+  for (let k = 0; k < sortedSleeps.length; k++) {
+    const event = sortedSleeps[k];
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+    const startH = start.getHours();
+    
+    if (!isChainActive) {
+      // --- ATTEMPT TO START CHAIN ---
+      // Trigger: Must start between 18:00 (6 PM) and 22:00 (10 PM)
+      if (startH >= 18 && startH <= 22) {
+        
+        // CHECK AHEAD: False Start Logic
+        let isFalseStart = false;
+        const nextEvent = sortedSleeps[k + 1];
 
-        // 2. Bedtime (Decimal)
-        bedTimes.push(session.start.getHours() + (session.start.getMinutes() / 60));
+        if (nextEvent) {
+          const thisEnd = end.getTime();
+          const nextStart = new Date(nextEvent.startTime).getTime();
+          const gapMins = (nextStart - thisEnd) / 60000;
 
-        // 3. Wake Up Time (Decimal)
-        wakeUpTimes.push(session.end.getHours() + (session.end.getMinutes() / 60));
+          if (gapMins > 40) {
+            isFalseStart = true;
+          }
+        }
+
+        if (!isFalseStart) {
+          isChainActive = true;
+          chainStartEvent = event;
+          chainEndEvent = event;
+        }
       }
-    };
+    } else {
+      // --- CHAIN IS ACTIVE ---
+      // Check gap from the END of the chain so far
+      const lastEnd = new Date(chainEndEvent.endTime).getTime();
+      const currentStart = start.getTime();
+      const gapMins = (currentStart - lastEnd) / 60000;
 
-    for (let i = 1; i < sortedSleeps.length; i++) {
-      const event = sortedSleeps[i];
-      const eventStart = new Date(event.startTime);
-      const eventEnd = new Date(event.endTime);
-      const gapMinutes = (eventStart.getTime() - currentSession.end.getTime()) / 60000;
+      // DEFINITION OF "MORNING" (After 04:30 AM)
+      const isAfter430 = (startH > 4) || (startH === 4 && start.getMinutes() >= 30);
+      
+      // BREAK CONDITION: Gap > 40 mins AND we are past 04:30 AM
+      if (gapMins > 40 && isAfter430) {
+        // 1. Close the previous chain and save stats
+        if (chainStartEvent && chainEndEvent) {
+          const nightStart = new Date(chainStartEvent.startTime);
+          const nightEnd = new Date(chainEndEvent.endTime);
+          
+          // Duration
+          nightSessions.push((nightEnd.getTime() - nightStart.getTime()) / 60000);
 
-      if (gapMinutes <= 30) {
-        currentSession.end = eventEnd; // Merge
+          // Bedtime (Handle 23:00 vs 01:00 math)
+          let bedTimeDec = nightStart.getHours() + (nightStart.getMinutes() / 60);
+          if (bedTimeDec < 12) bedTimeDec += 24; 
+          bedTimes.push(bedTimeDec);
+
+          // Wake Up
+          const wakeTimeDec = nightEnd.getHours() + (nightEnd.getMinutes() / 60);
+          wakeUpTimes.push(wakeTimeDec);
+        }
+
+        // 2. Reset
+        isChainActive = false;
+        chainStartEvent = null;
+        chainEndEvent = null;
+
+        // 3. IMPORTANT: Re-evaluate THIS event? 
+        // If we broke at 4:30am, this current event is likely a morning nap.
+        // We let the loop continue, and since it likely doesn't start between 18-22,
+        // it won't trigger a new chain immediately.
       } else {
-        processSession(currentSession); // Process completed session
-        currentSession = { start: eventStart, end: eventEnd }; // Reset
+        // Keep the chain going
+        chainEndEvent = event;
       }
     }
-    processSession(currentSession); // Process final session
+  }
+
+  // Handle the very last chain if the loop finishes while active
+  if (isChainActive && chainStartEvent && chainEndEvent) {
+    const nightStart = new Date(chainStartEvent.startTime);
+    const nightEnd = new Date(chainEndEvent.endTime);
+    nightSessions.push((nightEnd.getTime() - nightStart.getTime()) / 60000);
+    
+    let bedTimeDec = nightStart.getHours() + (nightStart.getMinutes() / 60);
+    if (bedTimeDec < 12) bedTimeDec += 24; 
+    bedTimes.push(bedTimeDec);
+    
+    const wakeTimeDec = nightEnd.getHours() + (nightEnd.getMinutes() / 60);
+    wakeUpTimes.push(wakeTimeDec);
   }
 
   // Calculate Medians
@@ -175,7 +229,6 @@ export default function SleepPage() {
   const medianNightHours = Math.floor(medianNight / 60);
   const medianNightMins = Math.round(medianNight % 60);
 
-  // 👈 NEW: Calculate Median Times
   const medianBedTime = decimalToTime(getMedian(bedTimes));
   const medianWakeTime = decimalToTime(getMedian(wakeUpTimes));
 
@@ -212,16 +265,81 @@ export default function SleepPage() {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     
-    // FIX: Generate the comparison string using LOCAL time
+    // 1. Generate Local Date String
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
     
-    // Find events for this specific date
-    const daysEvents = completedSleeps.filter(e => getDateKey(e.startTime) === dateStr);
+    // 2. Find events for this specific date & Sort Chronologically
+    const daysEvents = completedSleeps
+      .filter(e => getDateKey(e.startTime) === dateStr)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     
-    // ... (The rest of the calculation stays exactly the same) ...
+        // 3. LOGIC: Smart Night Sleep Detection
+    const nightSleepIds = new Set<number>();
+    
+    let isNightChainActive = false;
+    let lastEventEnd = 0; 
+
+    // Use a standard for-loop so we can use index 'k' to look ahead
+    for (let k = 0; k < daysEvents.length; k++) {
+      const event = daysEvents[k];
+      const start = new Date(event.startTime);
+      const startH = start.getHours();
+      
+      if (!isNightChainActive) {
+        // --- ATTEMPT TO START CHAIN ---
+        // Trigger: Must start between 18:00 (6 PM) and 22:00 (10 PM)
+        if (startH >= 18 && startH <= 22) {
+          
+          // CHECK AHEAD: Is this a "False Start" (Evening Nap)?
+          // We look at the next event. If the gap is > 40 mins, we DON'T start the chain yet.
+          let isFalseStart = false;
+          const nextEvent = daysEvents[k + 1];
+
+          if (nextEvent) {
+            const thisEnd = new Date(event.endTime).getTime();
+            const nextStart = new Date(nextEvent.startTime).getTime();
+            const gapMins = (nextStart - thisEnd) / 60000;
+
+            if (gapMins > 40) {
+              isFalseStart = true;
+            }
+          }
+
+          // If it's NOT a false start (or it's the last sleep of the day), start the night mode.
+          if (!isFalseStart) {
+            isNightChainActive = true;
+            nightSleepIds.add(event.id);
+            lastEventEnd = new Date(event.endTime).getTime();
+          }
+          // If it IS a false start, we do nothing. The loop continues to the next event 
+          // (e.g. the one at 20:00) and tries to start the chain there instead.
+        }
+      } else {
+        // --- CHAIN IS ACTIVE: END CONDITION ---
+        // We use the previous event's end time to check the gap
+        const currentStart = new Date(event.startTime).getTime();
+        const startM = start.getMinutes();
+        const gapMins = (currentStart - lastEventEnd) / 60000;
+
+        // DEFINITION OF "MORNING" (After 04:30 AM)
+        const isAfter430 = (startH > 4) || (startH === 4 && startM >= 30);
+        
+        // BREAK CONDITION:
+        // Gap > 40 mins AND we are past 04:30 AM
+        if (gapMins > 40 && isAfter430) {
+          isNightChainActive = false; // Stop the chain
+        } else {
+          // Keep the chain going (Split nights, or short morning snoozes)
+          nightSleepIds.add(event.id);
+          lastEventEnd = new Date(event.endTime).getTime();
+        }
+      }
+    }
+
+    // 4. Generate Blocks for Visuals
     const blocks = daysEvents.map(e => {
       const start = new Date(e.startTime);
       const end = new Date(e.endTime);
@@ -237,7 +355,9 @@ export default function SleepPage() {
 
       const left = (relativeStart / 24) * 100;
       const width = (durationVal / 24) * 100;
-      const isNight = startHours >= 18; 
+      
+      // Color is determined by the Set we filled above
+      const isNight = nightSleepIds.has(e.id); 
 
       const timeStr = `${formatTime(e.startTime)} - ${formatTime(e.endTime)}`;
       const durationStr = getDuration(e.startTime, e.endTime);

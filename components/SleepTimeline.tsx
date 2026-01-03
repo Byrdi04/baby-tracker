@@ -50,7 +50,7 @@ export default function SleepTimeline({ data }: { data: DayRow[] }) {
   return (
     <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
       <h3 className="text-sm text-slate-700 dark:text-slate-300 mb-4">
-        Sleep Schedule
+        Sleep Schedule (7.00 - 7.00)
       </h3>
 
       <div className="relative">

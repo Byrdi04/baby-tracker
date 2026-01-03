@@ -71,7 +71,7 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
       </h3>
 
       <div className="relative">
-        <div className="space-y-6 mt-2">
+        <div className="space-y-4 mt-2">
           {data.map((day, dIndex) => (
             <div key={dIndex} className="flex items-center gap-3">
               
@@ -79,7 +79,7 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
                 {day.date}
               </div>
 
-              <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full relative mt-1">
+              <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded-full relative mt-1">
                 
                 {gridMarkers.map((left) => (
                    <div key={left} className="absolute -top-2 -bottom-2 border-l border-dashed border-gray-200 dark:border-gray-600" style={{ left }} />
