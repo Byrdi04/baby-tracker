@@ -118,7 +118,7 @@ export default function SleepPage() {
   const medianNapHours = Math.floor(medianNap / 60);
   const medianNapMins = Math.round(medianNap % 60);
 
-  // ========== 3. NIGHT SLEEP LOGIC (Synced with Timeline Rules) ==========
+  // ========== 3. NIGHT SLEEP LOGIC ==========
   
   const sortedSleeps = [...completedSleeps].sort((a, b) => 
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
@@ -127,11 +127,15 @@ export default function SleepPage() {
   const nightSessions: number[] = [];
   const bedTimes: number[] = []; 
   const wakeUpTimes: number[] = [];
+  
+  // 👈 NEW: Track IDs so we can exclude them from Naps later
+  const nightEventIds = new Set<number>();
 
-  // We process the entire list of 500 events to find "Night Chains"
   let chainStartEvent = null;
   let chainEndEvent = null;
   let isChainActive = false;
+  // 👈 NEW: Temporary list to hold IDs of the current active chain
+  let currentChainIds: number[] = []; 
 
   for (let k = 0; k < sortedSleeps.length; k++) {
     const event = sortedSleeps[k];
@@ -140,77 +144,59 @@ export default function SleepPage() {
     const startH = start.getHours();
     
     if (!isChainActive) {
-      // --- ATTEMPT TO START CHAIN ---
-      // Trigger: Must start between 18:00 (6 PM) and 22:00 (10 PM)
       if (startH >= 18 && startH <= 22) {
-        
-        // CHECK AHEAD: False Start Logic
         let isFalseStart = false;
         const nextEvent = sortedSleeps[k + 1];
-
         if (nextEvent) {
-          const thisEnd = end.getTime();
-          const nextStart = new Date(nextEvent.startTime).getTime();
-          const gapMins = (nextStart - thisEnd) / 60000;
-
-          if (gapMins > 40) {
-            isFalseStart = true;
-          }
+          const gapMins = (new Date(nextEvent.startTime).getTime() - end.getTime()) / 60000;
+          if (gapMins > 40) isFalseStart = true;
         }
 
         if (!isFalseStart) {
           isChainActive = true;
           chainStartEvent = event;
           chainEndEvent = event;
+          currentChainIds = [event.id]; // Start tracking IDs
         }
       }
     } else {
-      // --- CHAIN IS ACTIVE ---
-      // Check gap from the END of the chain so far
       const lastEnd = new Date(chainEndEvent.endTime).getTime();
       const currentStart = start.getTime();
       const gapMins = (currentStart - lastEnd) / 60000;
-
-      // DEFINITION OF "MORNING" (After 04:30 AM)
       const isAfter430 = (startH > 4) || (startH === 4 && start.getMinutes() >= 30);
       
-      // BREAK CONDITION: Gap > 40 mins AND we are past 04:30 AM
       if (gapMins > 40 && isAfter430) {
-        // 1. Close the previous chain and save stats
+        // --- CHAIN BROKEN ---
         if (chainStartEvent && chainEndEvent) {
           const nightStart = new Date(chainStartEvent.startTime);
           const nightEnd = new Date(chainEndEvent.endTime);
           
-          // Duration
           nightSessions.push((nightEnd.getTime() - nightStart.getTime()) / 60000);
 
-          // Bedtime (Handle 23:00 vs 01:00 math)
           let bedTimeDec = nightStart.getHours() + (nightStart.getMinutes() / 60);
           if (bedTimeDec < 12) bedTimeDec += 24; 
           bedTimes.push(bedTimeDec);
 
-          // Wake Up
           const wakeTimeDec = nightEnd.getHours() + (nightEnd.getMinutes() / 60);
           wakeUpTimes.push(wakeTimeDec);
+
+          // 👈 NEW: Commit these IDs to the Night Set
+          currentChainIds.forEach(id => nightEventIds.add(id));
         }
 
-        // 2. Reset
         isChainActive = false;
         chainStartEvent = null;
         chainEndEvent = null;
-
-        // 3. IMPORTANT: Re-evaluate THIS event? 
-        // If we broke at 4:30am, this current event is likely a morning nap.
-        // We let the loop continue, and since it likely doesn't start between 18-22,
-        // it won't trigger a new chain immediately.
+        currentChainIds = [];
       } else {
-        // Keep the chain going
+        // --- CHAIN CONTINUES ---
         chainEndEvent = event;
+        currentChainIds.push(event.id); // Track ID
       }
     }
   }
 
-  // Handle the very last chain if the loop finishes while active
+  // Handle final chain
   if (isChainActive && chainStartEvent && chainEndEvent) {
     const nightStart = new Date(chainStartEvent.startTime);
     const nightEnd = new Date(chainEndEvent.endTime);
@@ -222,16 +208,72 @@ export default function SleepPage() {
     
     const wakeTimeDec = nightEnd.getHours() + (nightEnd.getMinutes() / 60);
     wakeUpTimes.push(wakeTimeDec);
+    
+    // 👈 NEW: Commit final IDs
+    currentChainIds.forEach(id => nightEventIds.add(id));
   }
 
-  // Calculate Medians
   const medianNight = getMedian(nightSessions);
   const medianNightHours = Math.floor(medianNight / 60);
   const medianNightMins = Math.round(medianNight % 60);
-
   const medianBedTime = decimalToTime(getMedian(bedTimes));
   const medianWakeTime = decimalToTime(getMedian(wakeUpTimes));
 
+
+  // ========== 5. NAP HISTOGRAMS (New) ==========
+
+  // A. Filter Naps: Completed sleeps that are NOT in the night set
+  const naps = completedSleeps.filter(e => !nightEventIds.has(e.id));
+
+  // B. Nap Duration Histogram (30 min increments)
+  // We'll create buckets up to 3 hours (180 mins). Anything > 180 goes in "3h+"
+  const durationBuckets: { [key: string]: number } = {};
+  const maxBuckets = 6; // 6 * 30 = 180 mins
+
+  // Initialize buckets
+  for(let i=0; i<maxBuckets; i++) {
+    durationBuckets[`${i*30}-${(i+1)*30-1}m`] = 0;
+  }
+  durationBuckets['3h+'] = 0;
+
+  naps.forEach(nap => {
+    const mins = getDurationMinutes(nap.startTime, nap.endTime);
+    const bucketIndex = Math.floor(mins / 30);
+    
+    if (bucketIndex >= maxBuckets) {
+      durationBuckets['3h+']++;
+    } else {
+      const label = `${bucketIndex*30}-${(bucketIndex+1)*30-1}m`;
+      durationBuckets[label]++;
+    }
+  });
+
+  const napDurationData = Object.entries(durationBuckets).map(([label, value]) => ({ label, value }));
+
+  // C. Nap Start Time Histogram (30 min increments)
+  // We only care about day hours (e.g. 06:00 to 18:00)
+  const startTimeBuckets: { [key: string]: number } = {};
+  
+  // Initialize buckets from 06:00 to 18:00
+  for(let h=6; h<18; h++) {
+    startTimeBuckets[`${h}:00`] = 0;
+    startTimeBuckets[`${h}:30`] = 0;
+  }
+
+  naps.forEach(nap => {
+    const start = new Date(nap.startTime);
+    const h = start.getHours();
+    const m = start.getMinutes();
+
+    // Only count if within our chart range (06:00 - 18:00)
+    if (h >= 6 && h < 18) {
+      const suffix = m < 30 ? '00' : '30';
+      const label = `${h}:${suffix}`;
+      startTimeBuckets[label]++;
+    }
+  });
+
+  const napStartTimeData = Object.entries(startTimeBuckets).map(([label, value]) => ({ label, value }));
   // 3. Prepare chart data (last 7 days)
   const chartData = Object.entries(sleepByDay)
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -387,7 +429,7 @@ export default function SleepPage() {
       {/* Statistics Cards */}
       <section className="grid grid-cols-3 gap-4">
         <div className="bg-indigo-50 dark:bg-indigo-900 p-4 rounded-xl">
-          <p className="text-indigo-600 dark:text-indigo-300 text-sm font-medium">Total Sleep</p>
+          <p className="text-indigo-600 font-semibold dark:text-indigo-300 text-sm font-medium">Total Sleep</p>
           <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">
             {medianDailyHours}h {medianDailyMins}m
           </p>
@@ -395,14 +437,14 @@ export default function SleepPage() {
 
         {/* 👇 NEW CARD: NIGHT SLEEP */}
         <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-xl">
-          <p className="text-blue-600 dark:text-blue-300 text-sm font-medium">Night Sleep</p>
+          <p className="text-blue-600 font-semibold dark:text-blue-300 text-sm font-medium">Night Sleep</p>
           <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
             {medianNightHours > 0 ? `${medianNightHours}h ` : ''}{medianNightMins}m
           </p>
         </div>
 
         <div className="bg-purple-50 dark:bg-purple-900 p-4 rounded-xl">
-          <p className="text-purple-600 dark:text-purple-300 text-sm font-medium">Nap Length</p>
+          <p className="text-purple-600 font-semibold dark:text-purple-300 text-sm font-medium">Nap Length</p>
           <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
             {medianNapHours > 0 ? `${medianNapHours}h ` : ''}{medianNapMins}m
           </p>
@@ -417,7 +459,7 @@ export default function SleepPage() {
       {/* 👇 NEW SECTION: Bedtime & Wake Up */}
       <section className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-xl">
-          <p className="text-yellow-800 dark:text-yellow-300 text-sm font-medium">Wake Up Time</p>
+          <p className="text-yellow-800 font-semibold dark:text-yellow-300 text-sm font-medium">Wake Up Time</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl">☀️</span>
             <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-100">
@@ -427,7 +469,7 @@ export default function SleepPage() {
         </div>
 
         <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded-xl">
-          <p className="text-orange-800 dark:text-orange-300 text-sm font-medium">Bedtime</p>
+          <p className="text-orange-800 font-semibold dark:text-orange-300 text-sm font-medium">Bedtime</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl">🛌</span>
             <p className="text-2xl font-bold text-orange-800 dark:text-orange-100">
@@ -441,8 +483,13 @@ export default function SleepPage() {
 
       {/* 1. The Timeline (New) */}
       <SleepTimeline data={timelineData} />
+
       {/* 2. The Graphs (Modified) */}
-      <SleepCharts chartData={chartData} />
+      <SleepCharts 
+        chartData={chartData} 
+        napDurationData={napDurationData} 
+        napStartTimeData={napStartTimeData} 
+      />
 
       {/* Sleep List */}
       <section className="space-y-3">
