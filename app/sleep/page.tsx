@@ -297,6 +297,23 @@ export default function SleepPage() {
     count
   }));
 
+  // ========== Avg Naps per Day ==========
+  const napsByDay: { [key: string]: number } = {};
+  
+  // Reuse the 'naps' array we created for the histogram (Step 5.A)
+  // If you don't have that array accessible, filter completedSleeps again:
+  // const naps = completedSleeps.filter(e => !nightEventIds.has(e.id));
+  
+  naps.forEach(nap => {
+    const dateKey = getDateKey(nap.startTime);
+    napsByDay[dateKey] = (napsByDay[dateKey] || 0) + 1;
+  });
+
+  const dailyNapCounts = Object.values(napsByDay);
+  const avgNapsPerDay = dailyNapCounts.length > 0
+    ? (dailyNapCounts.reduce((a, b) => a + b, 0) / dailyNapCounts.length).toFixed(1)
+    : "0.0";
+  
   // ========== 4. TIMELINE CHART DATA ==========
   
   const timelineData = [];
@@ -507,39 +524,46 @@ export default function SleepPage() {
       </header>
 
       {/* Statistics Cards */}
-      <section className="grid grid-cols-3 gap-4">
-        <div className="bg-indigo-50 dark:bg-indigo-900 p-4 rounded-xl">
-          <p className="text-indigo-600 font-semibold dark:text-indigo-300 text-sm font-medium">Total Sleep</p>
-          <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">
+      <section className="grid grid-cols-2 gap-2 mb-2">
+        
+        {/* ROW 1: Total Sleep & Night Sleep */}
+        <div className="bg-indigo-50 dark:bg-indigo-900 px-4 py-2 rounded-xl">
+          <p className="text-indigo-800 font-semibold dark:text-indigo-300 text-sm">Avg Total Sleep</p>
+          <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-100">
             {medianDailyHours}h {medianDailyMins}m
           </p>
         </div>
 
-        {/* 👇 NEW CARD: NIGHT SLEEP */}
-        <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-xl">
-          <p className="text-blue-600 font-semibold dark:text-blue-300 text-sm font-medium">Night Sleep</p>
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+        <div className="bg-blue-50 dark:bg-blue-900 px-4 py-2 rounded-xl">
+          <p className="text-blue-800 font-semibold dark:text-blue-300 text-sm">Avg Night Sleep</p>
+          <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
             {medianNightHours > 0 ? `${medianNightHours}h ` : ''}{medianNightMins}m
           </p>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-900 p-4 rounded-xl">
-          <p className="text-purple-600 font-semibold dark:text-purple-300 text-sm font-medium">Nap Length</p>
-          <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+        {/* ROW 2: Nap Length & Naps per Day */}
+        <div className="bg-purple-50 dark:bg-purple-900 px-4 py-2 rounded-xl">
+          <p className="text-purple-800 font-semibold dark:text-purple-300 text-sm">Avg Nap Length</p>
+          <p className="text-2xl font-bold text-purple-800 dark:text-purple-100">
             {medianNapHours > 0 ? `${medianNapHours}h ` : ''}{medianNapMins}m
           </p>
         </div>
-      </section>
 
-            {/* Existing Top Stats (Daily, Night Duration, Nap) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-         {/* ... (Your existing 3 cards are here) ... */}
+        <div className="bg-fuchsia-50 dark:bg-fuchsia-900 px-4 py-2 rounded-xl">
+          <p className="text-fuchsia-800 font-semibold dark:text-fuchsia-300 text-sm">Avg Naps pr. Day</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-2xl font-bold text-fuchsia-800 dark:text-fuchsia-100">
+              {avgNapsPerDay}
+            </p>
+          </div>
+        </div>
+
       </section>
 
       {/* 👇 NEW SECTION: Bedtime & Wake Up */}
       <section className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-xl">
-          <p className="text-yellow-800 font-semibold dark:text-yellow-300 text-sm font-medium">Wake Up Time</p>
+        <div className="bg-yellow-50 dark:bg-yellow-900 px-4 py-2 rounded-xl">
+          <p className="text-yellow-800 font-semibold dark:text-yellow-300 text-sm font-medium">Avg Wake Up Time</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl">☀️</span>
             <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-100">
@@ -548,8 +572,8 @@ export default function SleepPage() {
           </div>
         </div>
 
-        <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded-xl">
-          <p className="text-orange-800 font-semibold dark:text-orange-300 text-sm font-medium">Bedtime</p>
+        <div className="bg-orange-50 dark:bg-orange-900 px-4 py-2 rounded-xl">
+          <p className="text-orange-800 font-semibold dark:text-orange-300 text-sm font-medium">Avg Bedtime</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl">🛌</span>
             <p className="text-2xl font-bold text-orange-800 dark:text-orange-100">
