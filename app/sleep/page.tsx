@@ -418,6 +418,86 @@ export default function SleepPage() {
     });
   }
 
+    // ========== 6. SLEEP PROBABILITY CHART (10-min increments) ==========
+  
+  // A. Initialize 144 buckets (24 hours * 6 slots per hour) starting at 07:00
+  const timeSlots = new Array(144).fill(0);
+  
+  // B. Count total unique days in dataset to calculate percentage
+  const uniqueDays = new Set(completedSleeps.map(e => getDateKey(e.startTime))).size || 1;
+
+  completedSleeps.forEach(event => {
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+
+    // Convert Start/End to "Minutes from 7:00 AM"
+    // Formula: (Hours * 60 + Minutes) - (7 * 60)
+    // If result < 0, add 24h (1440 mins) to handle 00:00-07:00 times
+    let startMins = (start.getHours() * 60 + start.getMinutes()) - 420;
+    if (startMins < 0) startMins += 1440;
+
+    let endMins = (end.getHours() * 60 + end.getMinutes()) - 420;
+    if (endMins < 0) endMins += 1440;
+    
+    // Handle wrap around midnight/7am
+    // If end is smaller than start, it means it wrapped past 7am the next day
+    // For this visual pattern, we cap it at 1440 (end of chart)
+    if (endMins < startMins) endMins = 1440; 
+
+    // Convert minutes to Bucket Indices (0 to 143)
+    const startIndex = Math.floor(startMins / 10);
+    const endIndex = Math.floor(endMins / 10);
+
+    // Increment buckets
+    for (let i = startIndex; i <= endIndex; i++) {
+      if (i >= 0 && i < 144) {
+        timeSlots[i]++;
+      }
+    }
+  });
+
+    // ... (Previous calculation of timeSlots remains the same) ...
+
+  // C. Format Data
+  const rawData = timeSlots.map((count, index) => {
+    const totalMinutes = index * 10 + 420; 
+    let h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (h >= 24) h -= 24;
+
+    const timeLabel = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    
+    return {
+      time: timeLabel,
+      percent: (count / uniqueDays) * 100
+    };
+  });
+
+  // D. APPLY SMOOTHING (Moving Average)
+  // We average each point with its 2 neighbors on left and 2 on right (5-point window)
+  const sleepProbabilityData = rawData.map((point, i, arr) => {
+    const len = arr.length;
+    
+    // Get indices for neighbors (handling wrap-around for 24h cycle)
+    const i_minus_2 = (i - 2 + len) % len;
+    const i_minus_1 = (i - 1 + len) % len;
+    const i_plus_1  = (i + 1) % len;
+    const i_plus_2  = (i + 2) % len;
+
+    // Average the percentages
+    const sum = 
+      arr[i_minus_2].percent + 
+      arr[i_minus_1].percent + 
+      point.percent + 
+      arr[i_plus_1].percent + 
+      arr[i_plus_2].percent;
+
+    return {
+      time: point.time,
+      percent: sum / 5
+    };
+  });
+
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
@@ -489,6 +569,7 @@ export default function SleepPage() {
         chartData={chartData} 
         napDurationData={napDurationData} 
         napStartTimeData={napStartTimeData} 
+        sleepProbabilityData={sleepProbabilityData}
       />
 
       {/* Sleep List */}

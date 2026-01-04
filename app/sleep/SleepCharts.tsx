@@ -1,43 +1,74 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+// 1. Import Area and AreaChart
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid } from 'recharts';
 
 type ChartDataPoint = {
   label: string;
   value: number;
 };
 
+// 2. Define the new data type for probability
+type ProbabilityPoint = {
+  time: string; // "14:10"
+  percent: number; // 65 (for 65%)
+};
+
 type Props = {
   chartData: { date: string; hours: number }[];
   napDurationData: ChartDataPoint[];
   napStartTimeData: ChartDataPoint[];
+  sleepProbabilityData: ProbabilityPoint[]; // 👈 NEW PROP
 };
 
-// 1. Define the Custom Tick here
 const CustomTick = (props: any) => {
   const { x, y, payload } = props;
   return (
     <g transform={`translate(${x},${y})`}>
-      <text 
-        x={0} 
-        y={0} 
-        dy={4} 
-        textAnchor="end" 
-        fill="#9CA3AF" // tailwind gray-400
-        transform="rotate(-90)" 
-        fontSize={10}
-      >
+      <text x={0} y={0} dy={4} textAnchor="end" fill="#9CA3AF" transform="rotate(-90)" fontSize={10}>
         {payload.value}
       </text>
     </g>
   );
 };
 
-export default function SleepCharts({ chartData, napDurationData, napStartTimeData }: Props) {
+export default function SleepCharts({ chartData, napDurationData, napStartTimeData, sleepProbabilityData }: Props) {
   return (
     <section className="space-y-6 mb-6">
       
-      {/* 1. Daily Sleep Chart (Unchanged) */}
+      {/* 1. Sleep Probability (NEW - I put this at top as it's very useful) */}
+      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
+          Sleep Probability (24h Pattern)
+        </h3>
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={sleepProbabilityData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+              <XAxis 
+                dataKey="time" 
+                tick={{ fontSize: 10 }} 
+                interval={17} // Show a label roughly every 3 hours (18 * 10min)
+              />
+              <YAxis tick={{ fontSize: 12 }} unit="%" width={35} />
+              <Tooltip 
+                formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Chance of Sleep']}
+                contentStyle={{ borderRadius: '8px' }}
+              />
+              <Area 
+                type="basis"        // 👈 Changed to 'basis' for extra smoothing
+                dataKey="percent" 
+                stroke="#34a0cf"    // Line Color
+                strokeWidth={2}     // Make line slightly thicker
+                fill="#34a0cf"      // Solid Fill Color
+                fillOpacity={1}   // 👈 Low opacity solid fill (no gradient)
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* 2. Daily Sleep Chart (Existing) */}
       <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
           Sleep per Day (Last 7 Days)
@@ -54,20 +85,15 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
         </div>
       </div>
 
-      {/* 2. Nap Duration Histogram (Rotated Labels) */}
+      {/* 3. Nap Duration Histogram (Existing) */}
       <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
           Nap Duration Distribution
         </h3>
-        <div className="h-60"> {/* 👈 Increased Height */}
+        <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={napDurationData} margin={{ bottom: 40 }}> {/* 👈 Added Margin */}
-              <XAxis 
-                dataKey="label" 
-                tick={<CustomTick />} // 👈 Use Custom Component
-                interval={0}
-                height={20} // 👈 Reserve space for labels
-              />
+            <BarChart data={napDurationData} margin={{ bottom: 40 }}>
+              <XAxis dataKey="label" tick={<CustomTick />} interval={0} height={20} />
               <YAxis tick={{ fontSize: 12 }} width={30} allowDecimals={false} />
               <Tooltip formatter={(value) => [`${value} naps`, 'Count']} contentStyle={{ borderRadius: '8px' }} />
               <Bar dataKey="value" fill="#a855f7" radius={[4, 4, 0, 0]} />
@@ -76,20 +102,15 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
         </div>
       </div>
 
-      {/* 3. Nap Start Time Histogram (Rotated Labels) */}
+      {/* 4. Nap Start Time Histogram (Existing) */}
       <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
           Nap Start Times
         </h3>
-        <div className="h-60"> {/* 👈 Increased Height */}
+        <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={napStartTimeData} margin={{ bottom: 40 }}> {/* 👈 Added Margin */}
-              <XAxis 
-                dataKey="label" 
-                tick={<CustomTick />} // 👈 Use Custom Component
-                interval={0} 
-                height={10} // 👈 Reserve space
-              /> 
+            <BarChart data={napStartTimeData} margin={{ bottom: 40 }}>
+              <XAxis dataKey="label" tick={<CustomTick />} interval={0} height={10} /> 
               <YAxis tick={{ fontSize: 12}} width={30} allowDecimals={false} />
               <Tooltip formatter={(value) => [`${value} naps`, 'Started']} contentStyle={{ borderRadius: '8px' }} />
               <Bar dataKey="value" fill="#ec4899" radius={[4, 4, 0, 0]} />
