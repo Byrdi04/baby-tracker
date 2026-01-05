@@ -2,6 +2,7 @@
 
 // 1. Import Area and AreaChart
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid } from 'recharts';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 type ChartDataPoint = {
   label: string;
@@ -34,13 +35,11 @@ const CustomTick = (props: any) => {
 
 export default function SleepCharts({ chartData, napDurationData, napStartTimeData, sleepProbabilityData }: Props) {
   return (
-    <section className="space-y-6 mb-6">
+    <section className="space-y-6 mb-4">
       
-      {/* 1. Sleep Probability (NEW - I put this at top as it's very useful) */}
-      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-          Sleep Probability (24h Pattern)
-        </h3>
+      {/* 1. Sleep Probability */}
+      <ChartCard title="Sleep Probability (24h Pattern)">
+        {/* You still keep this div to define the specific height for this chart */}
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={sleepProbabilityData}>
@@ -48,7 +47,7 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
               <XAxis 
                 dataKey="time" 
                 tick={{ fontSize: 10 }} 
-                interval={17} // Show a label roughly every 3 hours (18 * 10min)
+                interval={17} 
               />
               <YAxis tick={{ fontSize: 12 }} unit="%" width={35} />
               <Tooltip 
@@ -56,23 +55,20 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
                 contentStyle={{ borderRadius: '8px' }}
               />
               <Area 
-                type="basis"        // 👈 Changed to 'basis' for extra smoothing
+                type="basis"
                 dataKey="percent" 
-                stroke="#34a0cf"    // Line Color
-                strokeWidth={2}     // Make line slightly thicker
-                fill="#34a0cf"      // Solid Fill Color
-                fillOpacity={1}   // 👈 Low opacity solid fill (no gradient)
+                stroke="#34a0cf"
+                strokeWidth={2}
+                fill="#34a0cf"
+                fillOpacity={1}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
-      {/* 2. Daily Sleep Chart (Existing) */}
-      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-          Sleep per Day (Last 7 Days)
-        </h3>
+      {/* 2. Daily Sleep Chart */}
+      <ChartCard title="Sleep per Day (Last 7 Days)">
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
@@ -83,13 +79,10 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
-      {/* 3. Nap Duration Histogram (Existing) */}
-      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-          Nap Duration Distribution
-        </h3>
+      {/* 3. Nap Duration Histogram */}
+      <ChartCard title="Nap Duration Distribution">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={napDurationData} margin={{ bottom: 40 }}>
@@ -100,13 +93,10 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
-      {/* 4. Nap Start Time Histogram (Existing) */}
-      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-          Nap Start Times
-        </h3>
+      {/* 4. Nap Start Time Histogram */}
+      <ChartCard title="Nap Start Times">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={napStartTimeData} margin={{ bottom: 40 }}>
@@ -117,7 +107,7 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
     </section>
   );

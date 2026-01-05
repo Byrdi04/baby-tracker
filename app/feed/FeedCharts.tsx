@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 type ChartDataPoint = {
   date: string;
@@ -14,10 +15,7 @@ type Props = {
 export default function FeedCharts({ chartData }: Props) {
   return (
     <section className="mb-6">
-      <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
-        <h3 className="text-sm text-slate-700 dark:text-slate-300 mb-4">
-          Feeds per Day (Last 7 Days)
-        </h3>
+      <ChartCard title="Feeds per Day (Last 7 Days)">
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
@@ -31,7 +29,7 @@ export default function FeedCharts({ chartData }: Props) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
     </section>
   );
 }

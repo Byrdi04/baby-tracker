@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic';
 
 import db from '@/lib/db';
 import WeightCharts from './WeightCharts';
+import StatCard from '@/components/ui/StatCard';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -79,25 +81,27 @@ export default function WeightPage() {
       
       {/* Header */}
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">⚖️ Weight Log</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-300">⚖️ Weight Log</h1>
       </header>
 
       {/* Statistics Cards */}
-      <section className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-cyan-50 dark:bg-cyan-900 p-4 rounded-xl">
-          <p className="text-cyan-600 dark:text-cyan-300 text-sm font-medium">Current Weight</p>
-          <p className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">
-            {latestWeight > 0 ? `${latestWeight} kg` : '—'}
-          </p>
-        </div>
-        <div className={`p-4 rounded-xl ${totalGain >= 0 ? 'bg-green-50 dark:bg-green-900' : 'bg-red-50 dark:bg-red-900'}`}>
-          <p className={`text-sm font-medium ${totalGain >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
-            Total Change
-          </p>
-          <p className={`text-2xl font-bold ${totalGain >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
-            {totalGain > 0 ? '+' : ''}{totalGain.toFixed(2)} kg
-          </p>
-        </div>
+      <section className="grid grid-cols-2 gap-4 mb-4">
+        
+        {/* 1. Current Weight (Cyan) */}
+        <StatCard 
+          label="Current Weight" 
+          value={latestWeight > 0 ? `${latestWeight} kg` : '—'} 
+          color="cyan" 
+        />
+
+        {/* 2. Total Change (Dynamic: Green vs Rose) */}
+        <StatCard 
+          label="Total Change" 
+          value={`${totalGain > 0 ? '+' : ''}${totalGain.toFixed(2)} kg`} 
+          // 👇 Logic determines which color string to pass
+          color={totalGain >= 0 ? 'green' : 'red'} 
+        />
+
       </section>
 
       {/* Growth Chart (Client Component) */}
@@ -121,7 +125,7 @@ export default function WeightPage() {
             return (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center"
+                className="bg-sky-50 dark:bg-sky-950 p-4 rounded-lg flex justify-between items-center"
               >
                 <div className="flex items-center gap-3">
                   <span className="bg-cyan-100 dark:bg-cyan-900 p-2 rounded-full text-xl">

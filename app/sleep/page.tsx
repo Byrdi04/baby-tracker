@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import db from '@/lib/db';
 import SleepCharts from './SleepCharts';
 import SleepTimeline from '@/components/SleepTimeline'; 
+import StatCard from '@/components/ui/StatCard';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -520,67 +522,56 @@ export default function SleepPage() {
       
       {/* Header */}
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">😴 Sleep Log</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-300">😴 Sleep Log</h1>
       </header>
 
       {/* Statistics Cards */}
-      <section className="grid grid-cols-2 gap-2 mb-2">
+      <section className="grid grid-cols-2 gap-2 mb-4">
         
-        {/* ROW 1: Total Sleep & Night Sleep */}
-        <div className="bg-indigo-50 dark:bg-indigo-900 px-4 py-2 rounded-xl">
-          <p className="text-indigo-800 font-semibold dark:text-indigo-300 text-sm">Avg Total Sleep</p>
-          <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-100">
-            {medianDailyHours}h {medianDailyMins}m
-          </p>
-        </div>
+        {/* Total sleep card */}
+        <StatCard 
+          label="Avg Total Sleep" 
+          value={`${medianDailyHours}h ${medianDailyMins}m`} 
+          color="blue" 
+        />
 
-        <div className="bg-blue-50 dark:bg-blue-900 px-4 py-2 rounded-xl">
-          <p className="text-blue-800 font-semibold dark:text-blue-300 text-sm">Avg Night Sleep</p>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
-            {medianNightHours > 0 ? `${medianNightHours}h ` : ''}{medianNightMins}m
-          </p>
-        </div>
+        {/* Night sleep card */}
+        <StatCard 
+          label="Avg Night Sleep" 
+          value={medianNightHours > 0 ? `${medianNightHours}h ${medianNightMins}m` : `${medianNightMins}m`}
+          color="indigo" 
+        />
 
-        {/* ROW 2: Nap Length & Naps per Day */}
-        <div className="bg-purple-50 dark:bg-purple-900 px-4 py-2 rounded-xl">
-          <p className="text-purple-800 font-semibold dark:text-purple-300 text-sm">Avg Nap Length</p>
-          <p className="text-2xl font-bold text-purple-800 dark:text-purple-100">
-            {medianNapHours > 0 ? `${medianNapHours}h ` : ''}{medianNapMins}m
-          </p>
-        </div>
+        {/* Nap Length*/}
+        <StatCard 
+          label="Avg Nap Length" 
+          value={medianNapHours > 0 ? `${medianNapHours}h ${medianNapMins}m` : `${medianNapMins}m`}
+          color="fuchsia" 
+        />
 
-        <div className="bg-fuchsia-50 dark:bg-fuchsia-900 px-4 py-2 rounded-xl">
-          <p className="text-fuchsia-800 font-semibold dark:text-fuchsia-300 text-sm">Avg Naps pr. Day</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-fuchsia-800 dark:text-fuchsia-100">
-              {avgNapsPerDay}
-            </p>
-          </div>
-        </div>
+        {/* Naps pr. day */}
+        <StatCard 
+          label="Avg Naps pr. Day" 
+          value={`${avgNapsPerDay}`}
+          color="purple" 
+        />
 
-      </section>
+        {/* Wake up time */}
+        <StatCard 
+          label="Avg Wake Up Time" 
+          value={`${medianWakeTime}`}
+          icon='☀️'
+          color="yellow" 
+        />
 
-      {/* 👇 NEW SECTION: Bedtime & Wake Up */}
-      <section className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-yellow-50 dark:bg-yellow-900 px-4 py-2 rounded-xl">
-          <p className="text-yellow-800 font-semibold dark:text-yellow-300 text-sm font-medium">Avg Wake Up Time</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl">☀️</span>
-            <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-100">
-              {medianWakeTime}
-            </p>
-          </div>
-        </div>
+        {/* Bedtime */}
+        <StatCard 
+          label="Avg Bedtime" 
+          value={`${medianBedTime}`}
+          icon='🛌'
+          color="orange" 
+        />
 
-        <div className="bg-orange-50 dark:bg-orange-900 px-4 py-2 rounded-xl">
-          <p className="text-orange-800 font-semibold dark:text-orange-300 text-sm font-medium">Avg Bedtime</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl">🛌</span>
-            <p className="text-2xl font-bold text-orange-800 dark:text-orange-100">
-              {medianBedTime}
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* Charts (Client Component) */}
@@ -613,10 +604,10 @@ export default function SleepPage() {
             return (
               <div
                 key={event.id}
-                className={`p-4 rounded-lg shadow-sm border flex justify-between items-center ${
+                className={`p-4 rounded-lg flex justify-between items-center ${
                   isOngoing 
-                    ? 'bg-indigo-50 dark:bg-indigo-900 border-indigo-200 dark:border-indigo-700' 
-                    : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+                    ? 'bg-indigo-50 dark:bg-indigo-900' 
+                    : 'bg-sky-50 dark:bg-sky-950'
                 }`}
               >
                 <div>

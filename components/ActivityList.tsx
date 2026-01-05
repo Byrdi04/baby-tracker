@@ -38,12 +38,42 @@ const getDurationString = (start: string, end: string) => {
 
 const getEventStyle = (type: string) => {
   switch (type) {
-    case 'SLEEP': return { icon: '😴', bg: 'bg-blue-100 dark:bg-blue-900' };
-    case 'FEED': return { icon: '🍼', bg: 'bg-pink-100 dark:bg-pink-900' };
-    case 'DIAPER': return { icon: '💩', bg: 'bg-yellow-100 dark:bg-yellow-900' };
-    case 'MEDICINE': return { icon: '💊', bg: 'bg-green-100 dark:bg-green-900' };
-    case 'WEIGHT': return { icon: '⚖️', bg: 'bg-cyan-100 dark:bg-cyan-900' };
-    default: return { icon: '📝', bg: 'bg-gray-100 dark:bg-gray-700' };
+    case 'SLEEP': 
+      return { 
+        icon: '😴', 
+        bg: 'bg-blue-100 dark:bg-blue-900', 
+        text: 'text-slate-900 dark:text-slate-100'
+      };
+    case 'FEED': 
+      return { 
+        icon: '🍼', 
+        bg: 'bg-pink-100 dark:bg-pink-900', 
+        text: 'text-slate-900 dark:text-slate-100'
+      };
+    case 'DIAPER': 
+      return { 
+        icon: '💩', 
+        bg: 'bg-yellow-100 dark:bg-yellow-900', 
+        text: 'text-slate-900 dark:text-slate-100'
+      };
+    case 'MEDICINE': 
+      return { 
+        icon: '💊', 
+        bg: 'bg-green-100 dark:bg-green-900', 
+        text: 'text-slate-900 dark:text-slate-100'
+      };
+    case 'WEIGHT': 
+      return { 
+        icon: '⚖️', 
+        bg: 'bg-cyan-100 dark:bg-cyan-900', 
+        text: 'text-slate-900 dark:text-slate-100'
+      };
+    default: 
+      return { 
+        icon: '📝', 
+        bg: 'bg-gray-100 dark:bg-gray-700', 
+        text: 'text-slate-900 dark:text-slate-100'
+      };
   }
 };
 
@@ -161,15 +191,32 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
             }
 
             return (
-              <div 
-                key={event.id} 
-                onClick={() => handleRowClick(event)} 
-                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
+                <div 
+                  key={event.id} 
+                  onClick={() => handleRowClick(event)} 
+                  className="
+                    /* 1. BACKGROUND */
+                    bg-sky-50 dark:bg-sky-950 
+                    
+                    /* 2. SPACING & SHAPE */
+                    p-4                 /* Padding inside the card */
+                    rounded-lg          /* Rounded corners */
+                    
+                    /* 3. LAYOUT (Flexbox) */
+                    flex justify-between items-center 
+                    
+                    /* 4. INTERACTION */
+                    cursor-pointer 
+                    hover:bg-gray-50 dark:hover:bg-gray-900 
+                    transition-colors
+                  "
+                >
                 <div className="flex items-center gap-3">
                   <span className={`${style.bg} p-2 rounded-full text-lg`}>{style.icon}</span>
                   <div>
-                    <p className="font-medium capitalize">{event.type.toLowerCase()}</p>
+                    <p className={`capitalize ${style.text}`}>
+                      {event.type.toLowerCase()}
+                    </p>
                     
                     {/* 👇 UPDATED DISPLAY LOGIC */}
                     {(subText || weightStat) && (

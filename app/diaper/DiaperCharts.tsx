@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 type DailyDataPoint = {
   date: string;
@@ -22,10 +23,7 @@ export default function DiaperCharts({ dailyChartData, weeklyChartData }: Props)
     <section className="mb-6 space-y-6">
       
       {/* Daily Chart */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-          Changes per Day (Last 7 Days)
-        </h3>
+      <ChartCard title="Changes per Day (Last 7 Days)">
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dailyChartData}>
@@ -39,13 +37,10 @@ export default function DiaperCharts({ dailyChartData, weeklyChartData }: Props)
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
       {/* Weekly Chart */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-          Changes per Week (Last 4 Weeks)
-        </h3>
+      <ChartCard title="Changes per Week (Last 4 Weeks)">
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weeklyChartData}>
@@ -59,7 +54,7 @@ export default function DiaperCharts({ dailyChartData, weeklyChartData }: Props)
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartCard>
 
     </section>
   );
