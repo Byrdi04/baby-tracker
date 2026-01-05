@@ -107,12 +107,16 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
                      <div key={left} className="absolute -top-2 -bottom-2 border-l border-dashed border-gray-200 dark:border-gray-600" style={{ left }} />
                   ))}
 
-                  {/* 3. NEW: The Red "Now" Line */}
+                  {/* 3. NEW: The "Now" Line and Label */}
                   {isToday && currentPos !== null && (
                     <div 
-                      className="absolute -top-0 -bottom-0   w-[2px] bg-gray-400 z-0 pointer-events-none shadow-sm"
+                      className="absolute -top-0 -bottom-0 w-[2px] bg-gray-400 z-0 pointer-events-none shadow-sm flex flex-col items-center"
                       style={{ left: `${currentPos}%` }}
                     >
+                      {/* The Text Label */}
+                      <span className="absolute top-full mt-1 text-[9px] font-bold text-gray-400 tracking-widest leading-none">
+                        Now
+                      </span>
                     </div>
                   )}
 
