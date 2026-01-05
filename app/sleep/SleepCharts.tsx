@@ -39,30 +39,42 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
       
       {/* 1. Sleep Probability */}
       <ChartCard title="Sleep Probability (24h Pattern)">
-        {/* You still keep this div to define the specific height for this chart */}
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={sleepProbabilityData}>
+            {/* 👇 Changed to BarChart, added gap setting */}
+            <BarChart data={sleepProbabilityData} barCategoryGap={0}>
+              
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+              
               <XAxis 
                 dataKey="time" 
                 tick={{ fontSize: 10 }} 
                 interval={17} 
               />
-              <YAxis tick={{ fontSize: 12 }} unit="%" width={35} />
+              
+              <YAxis 
+                tick={{ fontSize: 12 }} 
+                unit="%" 
+                width={35}
+                // 👇 NEW: Force axis to start at 20 and end at 100
+                domain={[10, 100]} 
+                ticks={[20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                allowDataOverflow={true}
+              />
+              
               <Tooltip 
+                cursor={{ fill: 'transparent' }} // Hides the gray hover bar background
                 formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Chance of Sleep']}
                 contentStyle={{ borderRadius: '8px' }}
               />
-              <Area 
-                type="basis"
+              
+              {/* 👇 Changed to Bar */}
+              <Bar 
                 dataKey="percent" 
-                stroke="#34a0cf"
-                strokeWidth={2}
                 fill="#34a0cf"
-                fillOpacity={1}
+                radius={[2, 2, 0, 0]} // Slight rounding on top
               />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </ChartCard>
