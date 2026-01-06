@@ -83,8 +83,8 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
   const gridMarkers = ['0%', '25%', '50%', '75%', '100%'];
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mb-4">
-      <h3 className="text-sm text-slate-700 dark:text-slate-300 mb-4">
+    <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl mb-4">
+      <h3 className="text-sm text-slate-700 font-semibold dark:text-slate-300 mb-4">
         Feeding Schedule (7.00 - 7.00)
       </h3>
 
@@ -101,7 +101,7 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
                   {day.date}
                 </div>
 
-                <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded-full relative mt-1">
+                <div className="flex-1 h-4 bg-slate-300 dark:bg-gray-700 rounded-full relative mt-1">
                   
                   {gridMarkers.map((left) => (
                      <div key={left} className="absolute -top-2 -bottom-2 border-l border-dashed border-gray-200 dark:border-gray-600" style={{ left }} />
@@ -110,11 +110,11 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
                   {/* 3. NEW: The "Now" Line and Label */}
                   {isToday && currentPos !== null && (
                     <div 
-                      className="absolute -top-0 -bottom-0 w-[2px] bg-gray-400 z-0 pointer-events-none shadow-sm flex flex-col items-center"
+                      className="absolute -top-0 -bottom-0 w-[2px] bg-slate-600 z-0 pointer-events-none shadow-sm flex flex-col items-center"
                       style={{ left: `${currentPos}%` }}
                     >
                       {/* The Text Label */}
-                      <span className="absolute top-full mt-1 text-[9px] font-bold text-gray-400 tracking-widest leading-none">
+                      <span className="absolute top-full mt-1 text-[9px] font-bold text-slate-600 tracking-widest leading-none">
                         Now
                       </span>
                     </div>

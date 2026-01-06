@@ -187,8 +187,8 @@ export default function FeedPage() {
       </section>
 
       {/* Feed Type Breakdown */}
-      <section className="bg-slate-50 dark:bg-gray-800 p-4 rounded-xl dark:border-gray-700 mb-4">
-        <h3 className="text-sm text-slate-700 dark:text-gray-300 mb-3">
+      <section className="bg-slate-100 dark:bg-gray-800 p-4 rounded-xl dark:border-gray-700 mb-4">
+        <h3 className="text-sm text-slate-700 font-semibold dark:text-gray-300 mb-3">
           Feed Type Breakdown
         </h3>
         <div className="flex gap-2 flex-wrap">
