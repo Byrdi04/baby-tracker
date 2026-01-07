@@ -1,7 +1,7 @@
 // components/ui/StatCard.tsx
 import { ReactNode } from 'react';
 
-type ColorVariant = 'indigo' | 'blue' | 'purple' | 'fuchsia' | 'green' | 'yellow' | 'orange' | 'violet' | 'red' | 'amber' | 'cyan';
+type ColorVariant = 'indigo' | 'blue' | 'purple' | 'fuchsia' | 'green' | 'yellow' | 'orange' | 'violet' | 'red' | 'amber' | 'emerald' | 'sky' | 'cyan';
 
 interface StatCardProps {
   label: string;
@@ -22,6 +22,8 @@ const colorStyles: Record<ColorVariant, { bg: string; text: string; label: strin
   violet:   { bg: 'bg-violet-200 dark:bg-violet-900',      text: 'text-violet-900 dark:text-violet-200',    label: 'text-violet-900 dark:text-violet-200' },
   cyan:    { bg: 'bg-cyan-100 dark:bg-cyan-900',      text: 'text-cyan-900 dark:text-cyan-200',    label: 'text-cyan-900 dark:text-cyan-200' },
   red:    { bg: 'bg-red-200 dark:bg-red-900',      text: 'text-red-900 dark:text-red-200',    label: 'text-red-900 dark:text-red-200' },
+  sky:    { bg: 'bg-sky-200 dark:bg-sky-900',      text: 'text-sky-900 dark:text-sky-200',    label: 'text-sky-900 dark:text-sky-200' },
+  emerald:    { bg: 'bg-emerald-200 dark:bg-emerald-900',      text: 'text-emerald-900 dark:text-emerald-200',    label: 'text-emerald-900 dark:text-emerald-200' },
 };
 
 export default function StatCard({ label, value, icon, color = 'indigo' }: StatCardProps) {

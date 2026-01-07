@@ -32,9 +32,9 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 
 ## ⚖️ Weight
 
-- [ ] Fix distance on x-axis on chart
-- [ ] Make import of WHO growth rates, based on gender and birthday
-- [ ] Make chart scrollable and zoomable
+- [x] Fix distance on x-axis on chart
+- [x] Make import of WHO growth rates, based on gender and birthday
+- [x] Make chart scrollable and zoomable
 
 ## 📊 Other aspects
 

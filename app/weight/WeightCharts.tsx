@@ -17,6 +17,7 @@ type CombinedDataPoint = {
 
 type Props = {
   chartData: CombinedDataPoint[];
+  title?: string;
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -56,7 +57,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function WeightCharts({ chartData }: Props) {
+export default function WeightCharts({ chartData, title = "Growth Chart" }: Props) {
   
   const [timeRange, setTimeRange] = useState<'1m' | '3m' | '6m' | '1y' | 'all'>('all');
 
@@ -74,39 +75,57 @@ export default function WeightCharts({ chartData }: Props) {
     return cutoff.getTime();
   }, [timeRange]);
 
-  // 2. CALCULATE Y-AXIS SCALE (Based on visible data)
+  // 2. FILTER DATA (Needed to calculate Y-Axis correctly)
+  const filteredData = useMemo(() => {
+    if (typeof minDomain !== 'number') return chartData;
+    return chartData.filter(pt => pt.timestamp >= minDomain);
+  }, [chartData, minDomain]);
+
+  // 3. CALCULATE Y-AXIS SCALE (Numeric logic applied to ALL ranges)
   const yDomain = useMemo(() => {
-    if (timeRange === 'all') return ['dataMin - 0.5', 'dataMax + 0.5'];
-
-    // Filter points that will actually be on screen
-    const visiblePoints = typeof minDomain === 'number' 
-      ? chartData.filter(pt => pt.timestamp >= minDomain)
-      : chartData;
-
-    if (visiblePoints.length === 0) return ['auto', 'auto'];
+    // If no data, return a safe default
+    if (filteredData.length === 0) return [0, 10];
 
     let min = Infinity;
     let max = -Infinity;
 
     // Scan visible points to find the lowest and highest values
-    // We check Weight, P15 (lowest curve), and P85 (highest curve)
-    visiblePoints.forEach(pt => {
+    filteredData.forEach(pt => {
       // Check Baby Weight
       if (pt.weight !== undefined) {
         min = Math.min(min, pt.weight);
         max = Math.max(max, pt.weight);
       }
-      // Check Percentiles (to ensure curves don't fly off screen)
+      // Check Percentiles
       if (pt.p15 !== undefined) min = Math.min(min, pt.p15);
       if (pt.p85 !== undefined) max = Math.max(max, pt.p85);
     });
 
-    if (min === Infinity) return ['auto', 'auto'];
+    if (min === Infinity) return [0, 10]; // Fallback
 
-    // Add padding (0.2kg) so dots aren't on the exact edge
+    // Add padding (0.2kg)
     return [min - 0.2, max + 0.2];
-  }, [chartData, minDomain, timeRange]);
+  }, [filteredData]);
 
+  // 4. CALCULATE Y-TICKS (Force 2kg increments: 2, 4, 6, 8...)
+  const yTicks = useMemo(() => {
+    const [minVal, maxVal] = yDomain;
+    
+    // Safety check in case yDomain logic failed (shouldn't happen now)
+    if (typeof minVal !== 'number' || typeof maxVal !== 'number') return undefined;
+
+    const ticks = [];
+    // Start at the nearest even number below the minimum
+    let current = Math.floor(minVal / 2) * 2;
+    if (current < 0) current = 0;
+
+    // Loop until we cover the maximum
+    while (current <= maxVal + 1) { 
+      ticks.push(current);
+      current += 2;
+    }
+    return ticks;
+  }, [yDomain]);
 
   const dateFormatter = (tickItem: number) => {
     return new Date(tickItem).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -121,10 +140,11 @@ export default function WeightCharts({ chartData }: Props) {
 
   return (
     <section className="mb-6">
-      <ChartCard title="Growth Chart (Corrected age)">
+      <ChartCard title={title}>
         
         <div className="h-64 mb-4">
           <ResponsiveContainer width="100%" height="100%">
+            {/* Pass FULL data, let axis domain crop it */}
             <LineChart data={chartData}>
               
               <XAxis 
@@ -140,26 +160,28 @@ export default function WeightCharts({ chartData }: Props) {
               <YAxis 
                 tick={{ fontSize: 12 }} 
                 unit=" kg" 
-                // 👇 Use the calculated domain here
-                domain={yDomain} 
+                domain={yDomain} // Use calculated numbers
+                ticks={yTicks}   // Force specific 2kg ticks
                 allowDataOverflow={true}
+                tickFormatter={(value) => value.toString()}
+                type="number"
               />
               
               <Tooltip content={<CustomTooltip />} />
               
-              {/* Lines (Unchanged) */}
-              <Line type="monotone" dataKey="p85" stroke="#0b7e28ff" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p15" stroke="#a97e29ff" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p75" stroke="#579858ff" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p25" stroke="#96a056ff" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p50" stroke="#649d6bff" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+              {/* Lines (Your Custom Colors Preserved) */}
+              <Line type="monotone" dataKey="p85" stroke="#018221ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p15" stroke="#d7c203ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p75" stroke="#029f05ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p25" stroke="#97b200ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p50" stroke="#01ca18ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
 
               <Line 
                 type="monotone" 
                 dataKey="weight" 
                 stroke="#3e6283ff" 
-                strokeWidth={1.5}
-                dot={{ fill: '#91b3e0ff', stroke: '#3e6283ff', strokeWidth: 1.5, r: 3 }}
+                strokeWidth={0}
+                dot={{ fill: '#2f86f8d6', stroke: '#51a8faff', strokeWidth: 1, r: 3 }}
                 activeDot={{ r: 7, strokeWidth: 0 }}
                 connectNulls 
               />
