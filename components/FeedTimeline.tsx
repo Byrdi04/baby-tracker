@@ -59,17 +59,17 @@ export default function FeedTimeline({ data }: { data: DayRow[] }) {
     switch (type) {
       case 'Breastfeeding': 
         return { 
-          bg: 'bg-yellow-100 dark:bg-yellow-900',       
+          bg: 'bg-yellow-100 dark:bg-yellow-700',       
           border: 'border-yellow-500' 
         };
       case 'Bottle': 
         return { 
-          bg: 'bg-cyan-100 dark:bg-cyan-900', 
-          border: 'border-cyan-500' 
+          bg: 'bg-blue-100 dark:bg-blue-800', 
+          border: 'border-blue-500' 
         };
       case 'Solid food': 
         return { 
-          bg: 'bg-green-100 dark:bg-green-900', 
+          bg: 'bg-green-200 dark:bg-green-700', 
           border: 'border-green-500' 
         };
       default: 

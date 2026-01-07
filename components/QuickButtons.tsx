@@ -243,7 +243,7 @@ export default function QuickButtons() {
           `}
         >
           <span className="text-2xl">{medicineGiven ? '👏' : '💊'}</span>
-          <span className="font-semibold">{medicineGiven ? 'Meds Given' : 'Give Meds'}</span>
+          <span className="font-semibold">{medicineGiven ? 'Vitamins given' : 'Give vitamins'}</span>
         </button>
 
         {/* Layout of the Weight button */}
@@ -292,7 +292,7 @@ export default function QuickButtons() {
             <div className="flex flex-col gap-3 mb-4">
               <button 
                 onClick={() => submitFeed('Breastfeeding')}
-                className="p-4 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-100 rounded-xl font-semibold hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors flex items-center gap-3"
+                className="p-4 bg-yellow-100 dark:bg-yellow-700 text-yellow-900 dark:text-yellow-100 rounded-xl font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors flex items-center gap-3"
               >
                 <span className="text-2xl">🤱</span>
                 Breastfeeding
@@ -300,7 +300,7 @@ export default function QuickButtons() {
               
               <button 
                 onClick={() => submitFeed('Bottle')}
-                className="p-4 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 rounded-xl font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-3"
+                className="p-4 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 rounded-xl font-semibold hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors flex items-center gap-3"
               >
                 <span className="text-2xl">🍼</span>
                 Bottle
@@ -308,7 +308,7 @@ export default function QuickButtons() {
               
               <button 
                 onClick={() => submitFeed('Solid food')}
-                className="p-4 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-100 rounded-xl font-semibold hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex items-center gap-3"
+                className="p-4 bg-green-200 dark:bg-green-700 text-green-900 dark:text-green-100 rounded-xl font-semibold hover:bg-green-300 dark:hover:bg-green-800 transition-colors flex items-center gap-3"
               >
                 <span className="text-2xl">🥣</span>
                 Solid food

@@ -47,25 +47,25 @@ const getEventStyle = (type: string) => {
     case 'FEED': 
       return { 
         icon: '🍼', 
-        bg: 'bg-pink-100 dark:bg-pink-900', 
+        bg: 'bg-cyan-100 dark:bg-cyan-900', 
         text: 'text-slate-900 dark:text-slate-100'
       };
     case 'DIAPER': 
       return { 
         icon: '💩', 
-        bg: 'bg-yellow-100 dark:bg-yellow-900', 
+        bg: 'bg-orange-200 dark:bg-orange-800', 
         text: 'text-slate-900 dark:text-slate-100'
       };
     case 'MEDICINE': 
       return { 
         icon: '💊', 
-        bg: 'bg-green-100 dark:bg-green-900', 
+        bg: 'bg-red-100 dark:bg-pink-900', 
         text: 'text-slate-900 dark:text-slate-100'
       };
     case 'WEIGHT': 
       return { 
         icon: '⚖️', 
-        bg: 'bg-cyan-100 dark:bg-cyan-900', 
+        bg: 'bg-green-100 dark:bg-green-900', 
         text: 'text-slate-900 dark:text-slate-100'
       };
     default: 
@@ -74,6 +74,17 @@ const getEventStyle = (type: string) => {
         bg: 'bg-gray-100 dark:bg-gray-700', 
         text: 'text-slate-900 dark:text-slate-100'
       };
+  }
+};
+
+const getEventTitle = (type: string) => {
+  switch (type) {
+    case 'MEDICINE': return 'Vitamins given'; // 👈 The change you want
+    case 'SLEEP': return 'Sleep';
+    case 'FEED': return 'Feeding';
+    case 'DIAPER': return 'Diaper Change';
+    case 'WEIGHT': return 'Weight Log';
+    default: return type.toLowerCase();
   }
 };
 
@@ -215,7 +226,7 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                   <span className={`${style.bg} p-2 rounded-full text-lg`}>{style.icon}</span>
                   <div>
                     <p className={`capitalize ${style.text}`}>
-                      {event.type.toLowerCase()}
+                      {getEventTitle(event.type)}
                     </p>
                     
                     {/* 👇 UPDATED DISPLAY LOGIC */}

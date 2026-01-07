@@ -57,7 +57,7 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
                 unit="%" 
                 width={35}
                 // 👇 NEW: Force axis to start at 20 and end at 100
-                domain={[10, 100]} 
+                domain={[20, 100]} 
                 ticks={[20, 30, 40, 50, 60, 70, 80, 90, 100]}
                 allowDataOverflow={true}
               />
@@ -108,7 +108,7 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
       </ChartCard>
 
       {/* 4. Nap Start Time Histogram */}
-      <ChartCard title="Nap Start Times">
+      {/* <ChartCard title="Nap Start Times">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={napStartTimeData} margin={{ bottom: 40 }}>
@@ -119,7 +119,7 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </ChartCard>
+      </ChartCard> */}
 
     </section>
   );

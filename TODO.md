@@ -1,5 +1,7 @@
 # 📝 Baby Tracker To-Do List
 
+ctrl+shit+V or cmd+shift+v to see with nice layout
+
 ## 📱 General issues
 
 - [ ] An entry should be editable from the activity log on the individual pages
@@ -7,20 +9,22 @@
 ## 🏠 Home
 
 - [ ] Make the start of the note visible on the card in the acitivity log
-- [ ] Change meds into vitamins on button and log card
-- [ ] Fix colors for feeding options, so that they match the feeding page
-- [ ] Fix background colors on the log cards, so they match the buttons
+- [x] Change meds into vitamins on button and log card
+- [x] Fix colors for feeding options, so that they match the feeding page
+- [x] Fix background colors on the log cards, so they match the buttons
 
 ## 💤 Sleep
 
 - [ ] Display ongoing sleep on the sleep schedule
-- [ ] Make limit for sleep probability 20%
-- [ ] Delete nap start times chart
+- [x] Make limit for sleep probability 20%
+- [x] Delete nap start times chart
+- [ ] Display nighttime sleep on the total sleep chart, and change into 7-7 intervals
 
 ## 👩‍🍼 Feed
 
-- [ ] Make feed breakdown into average pr. day
-- [ ] Change breastfeeding into breast
+- [x] Make feed breakdown into average pr. day
+- [x] Change breastfeeding into breast
+- [x] Change colors, so that solid food and bottle are further away from eachother
 
 ## 💩 Diaper
 
