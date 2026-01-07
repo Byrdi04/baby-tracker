@@ -20,7 +20,7 @@ const colorStyles: Record<ColorVariant, { bg: string; text: string; label: strin
   orange:  { bg: 'bg-orange-200 dark:bg-orange-900',  text: 'text-orange-900 dark:text-orange-200', label: 'text-orange-900 dark:text-orange-200' },
   amber:    { bg: 'bg-amber-200 dark:bg-amber-900',  text: 'text-amber-900 dark:text-amber-200',     label: 'text-amber-900 dark:text-amber-200' },
   violet:   { bg: 'bg-violet-200 dark:bg-violet-900',      text: 'text-violet-900 dark:text-violet-200',    label: 'text-violet-900 dark:text-violet-200' },
-  cyan:    { bg: 'bg-cyan-200 dark:bg-cyan-900',      text: 'text-cyan-900 dark:text-cyan-200',    label: 'text-cyan-900 dark:text-cyan-200' },
+  cyan:    { bg: 'bg-cyan-100 dark:bg-cyan-900',      text: 'text-cyan-900 dark:text-cyan-200',    label: 'text-cyan-900 dark:text-cyan-200' },
   red:    { bg: 'bg-red-200 dark:bg-red-900',      text: 'text-red-900 dark:text-red-200',    label: 'text-red-900 dark:text-red-200' },
 };
 
