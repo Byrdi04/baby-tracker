@@ -15,7 +15,8 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 
 ## 💤 Sleep
 
-- [ ] Display ongoing sleep on the sleep schedule
+- [x] Display ongoing sleep on the sleep schedule
+- [x] Fix nighttime logic
 - [x] Make limit for sleep probability 20%
 - [x] Delete nap start times chart
 - [ ] Display nighttime sleep on the total sleep chart, and change into 7-7 intervals
