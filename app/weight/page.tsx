@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import db from '@/lib/db';
-import WeightCharts from './WeightCharts';
+import WeightChartSection from '@/components/weight/WeightChartSection';
 import StatCard from '@/components/ui/StatCard';
 import WeightHistoryList from '@/components/weight/WeightHistoryList';
 import { STATIC_GROWTH_DATA } from '@/data/growth_curve';
@@ -92,16 +92,42 @@ export default function WeightPage() {
     shiftedReferencePoints = referencePoints;
   }
 
-  const cutoffTime = Date.now(); 
+    // ============================================================
+  // 5. INTELLIGENT MERGE (Fix for hanging dots)
+  // ============================================================
   
-  const combinedCorrected = [...userPoints, ...referencePoints]
-    .filter(pt => pt.timestamp <= cutoffTime) 
+  // A. Determine the "Horizon" 
+  // (The later of: Current Real Time OR The Last Weight Entry)
+  const maxUserTime = userPoints.length > 0 
+    ? userPoints[userPoints.length - 1].timestamp 
+    : 0;
+    
+  const horizonTime = Math.max(Date.now(), maxUserTime);
+
+  // B. Helper: Include WHO points up to the first one AFTER the horizon
+  // This ensures the line continues past the dot to the next "Month" marker.
+  const getRelevantReferencePoints = (points: any[]) => {
+    // 1. Find the first point that is strictly AFTER our horizon
+    const firstFuturePoint = points.find(pt => pt.timestamp > horizonTime);
+    
+    // 2. Determine the cutoff limit
+    // If we found a future point (e.g. Next Month), use that.
+    // If we didn't (end of chart), just use the horizon.
+    const limit = firstFuturePoint ? firstFuturePoint.timestamp : horizonTime;
+
+    return points.filter(pt => pt.timestamp <= limit);
+  };
+
+  // C. Filter Reference Data
+  const relevantCorrected = getRelevantReferencePoints(referencePoints);
+  const relevantActual = getRelevantReferencePoints(shiftedReferencePoints);
+  
+  // D. Merge & Sort
+  const combinedCorrected = [...userPoints, ...relevantCorrected]
     .sort((a, b) => a.timestamp - b.timestamp);
 
-  const combinedActual = [...userPoints, ...shiftedReferencePoints]
-    .filter(pt => pt.timestamp <= cutoffTime)
+  const combinedActual = [...userPoints, ...relevantActual]
     .sort((a, b) => a.timestamp - b.timestamp);
-
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
@@ -159,16 +185,10 @@ export default function WeightPage() {
 
       </section>
 
-      {/* CHART 1: Corrected Age */}
-      <WeightCharts 
-        chartData={combinedCorrected} 
-        title="Growth Chart (Corrected Age)" 
-      />
-
-      {/* CHART 2: Actual Age */}
-      <WeightCharts 
-        chartData={combinedActual} 
-        title="Growth Chart (Actual Age)" 
+      {/* CHARTs */}
+      <WeightChartSection 
+        correctedData={combinedCorrected} 
+        actualData={combinedActual} 
       />
 
       {/* Weight List Component */}

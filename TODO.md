@@ -19,6 +19,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Make limit for sleep probability 20%
 - [x] Delete nap start times chart
 - [ ] Display nighttime sleep on the total sleep chart, and change into 7-7 intervals
+- [ ] Add something with time between naps
 
 ## 👩‍🍼 Feed
 
