@@ -47,21 +47,34 @@ export default function DiaperPage() {
   `);
   const diaperEvents = stmt.all() as any[];
 
-  // ========== STATISTICS CALCULATIONS ==========
+  // ============================================================
+  // STATISTICS CALCULATIONS
+  // ============================================================
 
-  // 1. Changes per day
-  const diapersByDay: { [key: string]: number } = {};
+  // 1. Changes per day (Count AND Notes)
+  // Structure: { "2024-01-01": { count: 5, notes: ["Rash", " Huge"] } }
+  const dailyData: { [key: string]: { count: number, notes: string[] } } = {};
+
   diaperEvents.forEach(event => {
     const dateKey = getDateKey(event.startTime);
-    diapersByDay[dateKey] = (diapersByDay[dateKey] || 0) + 1;
+    
+    if (!dailyData[dateKey]) {
+      dailyData[dateKey] = { count: 0, notes: [] };
+    }
+    
+    dailyData[dateKey].count++;
+    if (event.note) {
+      dailyData[dateKey].notes.push(event.note);
+    }
   });
   
-  const dailyCounts = Object.values(diapersByDay);
-  const avgPerDay = dailyCounts.length > 0 
-    ? Math.round(dailyCounts.reduce((a, b) => a + b, 0) / dailyCounts.length * 10) / 10
+  // Calculate Avg (Logic slightly changed to access .count)
+  const daysWithData = Object.values(dailyData);
+  const avgPerDay = daysWithData.length > 0 
+    ? Math.round(daysWithData.reduce((a, b) => a + b.count, 0) / daysWithData.length * 10) / 10
     : 0;
 
-  // 2. Changes per week
+  // 2. Changes per week (Keep simple count logic)
   const diapersByWeek: { [key: string]: number } = {};
   diaperEvents.forEach(event => {
     const weekKey = getWeekKey(event.startTime);
@@ -73,21 +86,30 @@ export default function DiaperPage() {
     ? Math.round(weeklyCounts.reduce((a, b) => a + b, 0) / weeklyCounts.length * 10) / 10
     : 0;
 
-  // 3. Prepare daily chart data (last 7 days)
-  const dailyChartData = Object.entries(diapersByDay)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(-7)
-    .map(([date, count]) => ({
-      date: new Date(date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
-      changes: count
-    }));
+  // 3. Prepare daily chart data (Fill empty days)
+  const dailyChartData = [];
+  
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
 
-  // 4. Prepare weekly chart data (last 4 weeks)
+    const dayEntry = dailyData[key];
+
+    dailyChartData.push({
+      date: label,
+      changes: dayEntry ? dayEntry.count : 0,
+      notes: dayEntry ? dayEntry.notes : [] // 👈 Pass the array of notes
+    });
+  }
+
+  // 4. Prepare weekly chart data
   const weeklyChartData = Object.entries(diapersByWeek)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-4)
     .map(([week, count]) => ({
-      week: week.split('-')[1], // Just "W01", "W02", etc.
+      week: week.split('-')[1], 
       changes: count
     }));
 

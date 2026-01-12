@@ -21,6 +21,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Delete nap start times chart
 - [ ] Display nighttime sleep on the total sleep chart, and change into 7-7 intervals
 - [ ] Add something with time between naps
+- [x] Fix sleep that goes accros days
 
 ## 👩‍🍼 Feed
 
@@ -30,7 +31,9 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 
 ## 💩 Diaper
 
-- [ ] Possibility of adding a note to a data entry
+- [x] Possibility of adding a note to a data entry
+- [x] Fix x-axis on chart
+- [x] Add note to chart
 
 ## ⚖️ Weight
 
@@ -41,4 +44,4 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 
 ## 📊 Other aspects
 
-- [ ] Make notes visible
+- [x] Make notes visible
