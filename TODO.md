@@ -37,6 +37,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Fix distance on x-axis on chart
 - [x] Make import of WHO growth rates, based on gender and birthday
 - [x] Make chart scrollable and zoomable
+- [ ] Enter weight in gram
 
 ## 📊 Other aspects
 

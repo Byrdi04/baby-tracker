@@ -9,6 +9,7 @@ type EventRow = {
   startTime: string;
   endTime: string | null;
   data: string;
+  note: string | null;
 };
 
 // 1. HELPER: Format for Input
@@ -95,6 +96,7 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
   const [editTime, setEditTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editValue, setEditValue] = useState(''); 
+  const [editNote, setEditNote] = useState('');
 
   // HELPER: Calculate Weight Stats (Updated Return Type)
   const getWeightStats = (currentEvent: EventRow, index: number) => {
@@ -137,6 +139,7 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
     setEditEndTime(event.endTime ? toInputFormat(event.endTime) : '');
     const dataObj = JSON.parse(event.data || '{}');
     setEditValue(dataObj.amount || '');
+    setEditNote(event.note || ''); // 👈 NEW: Load existing note
   };
 
   const handleDelete = async () => {
@@ -160,7 +163,8 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
         id: selectedEvent.id,
         startTime: editTime, 
         endTime: editEndTime || null, 
-        data: currentData    
+        data: currentData,
+        note: editNote || null // 👈 NEW: Send the note
       }),
     });
     setSelectedEvent(null);
@@ -173,24 +177,28 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
         {initialEvents.length === 0 ? (
           <p className="text-gray-400 text-center italic mt-10">No events logged yet.</p>
         ) : (
-          initialEvents.map((event, index) => {
+                    initialEvents.map((event, index) => {
             const style = getEventStyle(event.type);
             const eventData = JSON.parse(event.data || '{}');
             
             let subText = ""; 
-            // 👈 NEW: Variable to hold the styled stat object
             let weightStat: { text: string; isGain: boolean } | null = null;
+            
+            // 👇 NEW: Variable to hold the note preview
+            let notePreview = null;
 
-            // WEIGHT LOGIC
+            // 1. WEIGHT LOGIC
             if (event.type === 'WEIGHT' && eventData.amount) {
                subText = `${eventData.amount} kg`;
                weightStat = getWeightStats(event, index);
             }
 
-            // FEED LOGIC
-            if (event.type === 'FEED' && eventData.feedType) subText = eventData.feedType;
+            // 2. FEED LOGIC
+            if (event.type === 'FEED' && eventData.feedType) {
+               subText = eventData.feedType;
+            }
             
-            // SLEEP LOGIC
+            // 3. SLEEP LOGIC
             let timeDisplay = formatDisplayTime(event.startTime);
             if (event.type === 'SLEEP') {
                 if (event.endTime) {
@@ -201,37 +209,36 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                 }
             }
 
+            // 4. NOTE DISPLAY LOGIC (The new part)
+            // Show note only for: DIAPER, MEDICINE, or custom NOTE entries
+            if (event.note && (event.type === 'DIAPER' || event.type === 'MEDICINE' || event.type === 'NOTE')) {
+              notePreview = event.note;
+            }
+
             return (
                 <div 
                   key={event.id} 
                   onClick={() => handleRowClick(event)} 
                   className="
-                    /* 1. BACKGROUND */
                     bg-sky-50 dark:bg-sky-950 
-                    
-                    /* 2. SPACING & SHAPE */
-                    p-4                 /* Padding inside the card */
-                    rounded-lg          /* Rounded corners */
-                    
-                    /* 3. LAYOUT (Flexbox) */
+                    p-4 rounded-lg 
                     flex justify-between items-center 
-                    
-                    /* 4. INTERACTION */
                     cursor-pointer 
                     hover:bg-gray-50 dark:hover:bg-gray-900 
                     transition-colors
                   "
                 >
-                <div className="flex items-center gap-3">
-                  <span className={`${style.bg} p-2 rounded-full text-lg`}>{style.icon}</span>
-                  <div>
-                    <p className={`capitalize ${style.text}`}>
+                <div className="flex items-center gap-3 overflow-hidden"> {/* Added overflow-hidden for truncation */}
+                  <span className={`${style.bg} p-2 rounded-full text-lg flex-shrink-0`}>{style.icon}</span>
+                  
+                  <div className="min-w-0"> {/* min-w-0 needed for flex child truncation */}
+                    <p className={`capitalize ${style.text} font-medium`}>
                       {getEventTitle(event.type)}
                     </p>
                     
-                    {/* 👇 UPDATED DISPLAY LOGIC */}
+                    {/* Standard Subtext (Weight/Sleep Duration) */}
                     {(subText || weightStat) && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 truncate">
                         {subText}
                         {weightStat && (
                           <span className={`ml-1 ${
@@ -245,9 +252,20 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                       </p>
                     )}
 
+                    {/* 👇 NEW: Note Preview */}
+                    {notePreview && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate pr-2">
+                        {notePreview}
+                      </p>
+                    )}
+
                   </div>
                 </div>
-                <span className="text-sm text-gray-400 whitespace-nowrap">{timeDisplay}</span>
+                
+                {/* Time Display (Right Side) */}
+                <span className="text-sm text-gray-400 whitespace-nowrap flex-shrink-0 ml-2">
+                  {timeDisplay}
+                </span>
               </div>
             );
           })
@@ -276,6 +294,16 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
                 <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="w-full p-3 mb-6 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
               </>
             )}
+
+            {/* 👇 NEW: Note Field (Always visible) */}
+            <label className="block text-sm text-gray-500 mb-1">Note (Optional)</label>
+            <textarea 
+              value={editNote} 
+              onChange={(e) => setEditNote(e.target.value)} 
+              placeholder="Add a note..."
+              rows={3}
+              className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
+            />
 
             <div className="flex gap-3 mt-4">
               <button onClick={handleDelete} className="px-4 py-3 bg-red-100 text-red-600 font-bold rounded-lg hover:bg-red-200">Delete</button>

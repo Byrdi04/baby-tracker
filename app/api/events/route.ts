@@ -136,22 +136,20 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     
-    // 1. We now extract 'endTime' from the body as well
-    const { id, startTime, endTime, data } = body;
+    // 👇 Add 'note' to the destructuring
+    const { id, startTime, endTime, data, note } = body;
 
-    // 2. Update the SQL query to include 'endTime = ?'
     const stmt = db.prepare(`
       UPDATE events 
-      SET startTime = ?, endTime = ?, data = ?
+      SET startTime = ?, endTime = ?, data = ?, note = ?
       WHERE id = ?
     `);
 
-    // 3. Run the query with the new variables
-    // We check if endTime exists; if yes, format it to ISO string. If no, save as null.
     stmt.run(
       new Date(startTime).toISOString(), 
       endTime ? new Date(endTime).toISOString() : null, 
-      JSON.stringify(data || {}), 
+      JSON.stringify(data || {}),
+      note || null, // 👈 Add this
       id
     );
 
