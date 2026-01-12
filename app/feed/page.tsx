@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import db from '@/lib/db';
 import FeedCharts from './FeedCharts';
 import FeedTimeline from '@/components/FeedTimeline';
+import StatCard from '@/components/ui/StatCard';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -31,11 +33,11 @@ const getDateKey = (dateStr: string): string => {
 const getFeedStyle = (feedType: string) => {
   switch (feedType) {
     case 'Breastfeeding':
-      return { icon: '🤱', bg: 'bg-yellow-100 dark:bg-pink-900', text: 'text-yellow-900 dark:text-pink-100' };
+      return { icon: '🤱', bg: 'bg-yellow-100 dark:bg-yellow-700', text: 'text-yellow-900 dark:text-yellow-100' };
     case 'Bottle':
-      return { icon: '🍼', bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-800 dark:text-blue-100' };
+      return { icon: '🍼', bg: 'bg-blue-100 dark:bg-blue-800', text: 'text-blue-800 dark:text-blue-100' };
     case 'Solid food':
-      return { icon: '🥣', bg: 'bg-green-100 dark:bg-orange-900', text: 'text-green-900 dark:text-orange-100' };
+      return { icon: '🥣', bg: 'bg-green-200 dark:bg-green-700', text: 'text-green-900 dark:text-green-100' };
     default:
       return { icon: '🍼', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-100' };
   }
@@ -85,18 +87,31 @@ export default function FeedPage() {
   const avgGapHours = Math.floor(avgGapMinutes / 60);
   const avgGapMins = avgGapMinutes % 60;
 
-  // 3. Feed type breakdown
+  // 3. Feed type breakdown (AVG PER DAY)
   const feedTypeCounts: { [key: string]: number } = {};
+  
   feedEvents.forEach(event => {
     const data = JSON.parse(event.data || '{}');
     const type = data.feedType || 'Unknown';
     feedTypeCounts[type] = (feedTypeCounts[type] || 0) + 1;
   });
 
-  const feedTypeData = Object.entries(feedTypeCounts).map(([name, value]) => ({
-    name,
-    value
-  }));
+  // Calculate number of days in this dataset to get the average
+  const numberOfDays = Object.keys(feedsByDay).length || 1;
+
+  const feedTypeData = Object.entries(feedTypeCounts).map(([originalName, totalCount]) => {
+    // A. Rename 'Breastfeeding' to 'Breast' for display
+    const displayName = originalName === 'Breastfeeding' ? 'Breast' : originalName;
+
+    // B. Calculate Average per Day
+    const avg = Math.round(totalCount / numberOfDays);
+
+    return {
+      name: displayName,       // The text to show (e.g. "Breast")
+      styleType: originalName, // The original DB value for colors (e.g. "Breastfeeding")
+      value: avg               // The calculated average
+    };
+  });
 
   // 4. Prepare chart data (last 7 days)
   const chartData = Object.entries(feedsByDay)
@@ -163,33 +178,37 @@ export default function FeedPage() {
       
       {/* Header */}
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">🍼 Feed Log</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-300">🍼 Feed Log</h1>
       </header>
 
       {/* Statistics Cards */}
       <section className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-violet-50 dark:bg-violet-900 p-4 rounded-xl">
-          <p className="text-violet-800 dark:text-violet-300 text-sm font-medium">Feeds per Day</p>
-          <p className="text-2xl font-bold text-violet-800 dark:text-violet-100">
-            {avgFeedsPerDay}
-          </p>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-xl">
-          <p className="text-blue-800 dark:text-blue-300 text-sm font-medium">Time Between Feeds</p>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
-            {avgGapHours}h {avgGapMins}m
-          </p>
-        </div>
+
+        {/* Feeds per Day */}
+        <StatCard 
+          label="Avg Feeds pr. Day" 
+          value={`${avgFeedsPerDay}`} 
+          color="purple" 
+        />
+
+        {/* Time Between Feeds */}
+        <StatCard 
+          label="Avg Time Between Feeds" 
+          value={`${avgGapHours}h ${avgGapMins}m`} 
+          color="red" 
+        />
       </section>
 
       {/* Feed Type Breakdown */}
-      <section className="bg-slate-50 dark:bg-gray-800 p-4 rounded-xl dark:border-gray-700 mb-4">
-        <h3 className="text-sm text-slate-700 dark:text-gray-300 mb-3">
-          Feed Type Breakdown
+      <section className="bg-slate-100 dark:bg-gray-800 p-4 rounded-xl dark:border-gray-700 mb-4">
+        <h3 className="text-sm text-slate-700 font-semibold dark:text-gray-300 mb-3">
+          Feed Types (Avg / Day)
         </h3>
         <div className="flex gap-2 flex-wrap">
-          {feedTypeData.map(({ name, value }) => {
-            const style = getFeedStyle(name);
+          {feedTypeData.map(({ name, styleType, value }) => {
+            // Use 'styleType' (original name) to get the correct colors
+            const style = getFeedStyle(styleType);
+            
             return (
               <div 
                 key={name}
@@ -228,7 +247,7 @@ export default function FeedPage() {
             return (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center"
+                className="bg-sky-50 dark:bg-sky-950 p-4 rounded-lg flex justify-between items-center"
               >
                 <div className="flex items-center gap-3">
                   <span className={`${style.bg} p-2 rounded-full text-xl`}>

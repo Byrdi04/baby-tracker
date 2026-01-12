@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default function Home() {
   // 1. FETCH DATA (Server Side)
   // We disable caching for this specific request so the list is always fresh
-  const stmt = db.prepare('SELECT * FROM events ORDER BY startTime DESC LIMIT 50');
+  const stmt = db.prepare('SELECT * FROM events ORDER BY startTime DESC LIMIT 1000');
   const events = stmt.all() as any[]; // pass as any to avoid strict type issues between server/client files
 
   return (

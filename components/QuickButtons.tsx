@@ -165,39 +165,100 @@ export default function QuickButtons() {
       <section className="grid grid-cols-2 gap-4 mb-8">
         
         {/* Layout of the Sleep button*/}
-        <button onClick={() => handleLog('SLEEP')} disabled={loading} className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${isSleeping ? 'bg-indigo-800 text-white ring-4 ring-indigo-200 hover:bg-indigo-900 text-indigo-900' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900'}`}>
+        <button 
+          onClick={() => handleLog('SLEEP')} 
+          disabled={loading} 
+          className={`
+            /* --- 1. BASE STYLES (Always applied) --- */
+            p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95
+            
+            ${isSleeping 
+              ? /* --- 2. ACTIVE STATE (Sleeping) --- */
+                `bg-indigo-800 text-indigo-100 ring-4 ring-indigo-200 hover:bg-indigo-900 
+                dark:bg-indigo-800 dark:text-indigo-100 dark:ring-indigo-500 dark:hover:bg-indigo-900`
+              
+              : /* --- 3. INACTIVE STATE (Awake) --- */
+                `bg-indigo-100 text-indigo-900 hover:bg-indigo-200 
+                dark:bg-indigo-900 dark:text-indigo-100 dark:hover:bg-indigo-950`
+            }
+          `}
+        >
           <span className="text-2xl">{isSleeping ? '😴' : '👶'}</span>
           <span className={`font-semibold whitespace-nowrap ${(isSleeping ? sleepText : awakeText).length > 19 ? 'text-sm' : 'text-base'}`}>
-        {isSleeping ? sleepText : awakeText}
+            {isSleeping ? sleepText : awakeText}
           </span>
         </button>
         
         {/* layout of the Feed button - NOW OPENS MODAL */}
         <button 
           onClick={() => setShowFeedModal(true)} 
-          className="bg-cyan-100 hover:bg-cyan-200 active:scale-95 text-cyan-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className={`
+            /* --- 1. BASE STYLES --- */
+            p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95
+            
+            /* --- 2. LIGHT MODE STYLES --- */
+            bg-cyan-100 text-cyan-900 hover:bg-cyan-200
+            
+            /* --- 3. DARK MODE STYLES --- */
+            dark:bg-cyan-900 dark:text-cyan-100 dark:hover:bg-cyan-950
+          `}
         >
-          <span className="text-2xl">🍼</span><span className="font-semibold">Feed</span>
+          <span className="text-2xl">🍼</span>
+          <span className="font-semibold">Feed</span>
         </button>
 
         {/* Layout of the Diaper button */}
-        <button onClick={() => handleLog('DIAPER')} className="bg-orange-200 hover:bg-orange-300 active:scale-95 text-orange-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all">
-          <span className="text-2xl">💩</span><span className="font-semibold">Diaper</span>
+        <button 
+          onClick={() => handleLog('DIAPER')} 
+          className={`
+            /* --- BASE --- */
+            p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95
+            
+            /* --- LIGHT MODE --- */
+            bg-orange-200 text-orange-900 hover:bg-orange-300
+            
+            /* --- DARK MODE --- */
+            dark:bg-orange-800 dark:text-orange-100 dark:hover:bg-orange-900
+          `}
+        >
+          <span className="text-2xl">💩</span>
+          <span className="font-semibold">Diaper</span>
         </button>
 
         {/* Layout of the Medicine button */}
         <button 
           onClick={() => handleLog('MEDICINE')} 
-          className={`p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95 ${medicineGiven ? 'bg-rose-100 text-rose-900 hover:bg-rose-200' : 'bg-rose-500 text-white hover:bg-rose-600 ring-4 ring-rose-300'}`}
+          className={`
+            /* --- BASE --- */
+            p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95
+            
+            ${medicineGiven 
+              ? /* --- STATE: MEDICINE GIVEN (Done/Passive) --- */
+                `bg-rose-100 text-rose-900 hover:bg-rose-200 
+                dark:bg-rose-900 dark:text-rose-100 dark:hover:bg-rose-950`
+              
+              : /* --- STATE: GIVE MEDS (Action/Urgent) --- */
+                `bg-rose-500 text-white hover:bg-rose-600 ring-4 ring-rose-300`
+            }
+          `}
         >
           <span className="text-2xl">{medicineGiven ? '👏' : '💊'}</span>
-          <span className="font-semibold">{medicineGiven ? 'Meds Given' : 'Give Meds'}</span>
+          <span className="font-semibold">{medicineGiven ? 'Vitamins given' : 'Give vitamins'}</span>
         </button>
 
         {/* Layout of the Weight button */}
         <button 
           onClick={() => setShowWeightModal(true)}
-          className="bg-green-200 hover:bg-green-300 active:scale-95 text-green-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className={`
+            /* --- BASE --- */
+            p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95
+            
+            /* --- LIGHT MODE --- */
+            bg-green-200 text-green-900 hover:bg-green-300
+            
+            /* --- DARK MODE --- */
+            dark:bg-green-900 dark:text-green-100 dark:hover:bg-green-950
+          `}
         >
           <span className="text-2xl">⚖️</span>
           <span className="font-semibold">Weight</span>
@@ -206,9 +267,19 @@ export default function QuickButtons() {
         {/* Layout of the Note button */}
         <button 
           onClick={() => setShowNoteModal(true)} 
-          className="bg-slate-300 hover:bg-slate-400 active:scale-95 text-slate-900 p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all"
+          className={`
+            /* --- BASE --- */
+            p-6 rounded-xl shadow-md flex flex-col items-center justify-center gap-2 transition-all active:scale-95
+            
+            /* --- LIGHT MODE --- */
+            bg-slate-300 text-slate-900 hover:bg-slate-400
+            
+            /* --- DARK MODE --- */
+            dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-800
+          `}
         >
-          <span className="text-xl">📝</span><span className="font-semibold">Note</span>
+          <span className="text-xl">📝</span>
+          <span className="font-semibold">Note</span>
         </button>
       </section>
 
@@ -221,7 +292,7 @@ export default function QuickButtons() {
             <div className="flex flex-col gap-3 mb-4">
               <button 
                 onClick={() => submitFeed('Breastfeeding')}
-                className="p-4 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-100 rounded-xl font-semibold hover:bg-pink-200 dark:hover:bg-pink-800 transition-colors flex items-center gap-3"
+                className="p-4 bg-yellow-100 dark:bg-yellow-700 text-yellow-900 dark:text-yellow-100 rounded-xl font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors flex items-center gap-3"
               >
                 <span className="text-2xl">🤱</span>
                 Breastfeeding
@@ -229,7 +300,7 @@ export default function QuickButtons() {
               
               <button 
                 onClick={() => submitFeed('Bottle')}
-                className="p-4 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 rounded-xl font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-3"
+                className="p-4 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 rounded-xl font-semibold hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors flex items-center gap-3"
               >
                 <span className="text-2xl">🍼</span>
                 Bottle
@@ -237,7 +308,7 @@ export default function QuickButtons() {
               
               <button 
                 onClick={() => submitFeed('Solid food')}
-                className="p-4 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-100 rounded-xl font-semibold hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex items-center gap-3"
+                className="p-4 bg-green-200 dark:bg-green-700 text-green-900 dark:text-green-100 rounded-xl font-semibold hover:bg-green-300 dark:hover:bg-green-800 transition-colors flex items-center gap-3"
               >
                 <span className="text-2xl">🥣</span>
                 Solid food

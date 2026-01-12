@@ -1,162 +1,198 @@
 export const dynamic = 'force-dynamic';
 
 import db from '@/lib/db';
-import WeightCharts from './WeightCharts';
-
-// Helper: Format time (14:30)
-const formatTime = (dateStr: string) => {
-  return new Date(dateStr).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-};
-
-// Helper: Format date (Mon 15 Jan)
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short'
-  });
-};
+import WeightChartSection from '@/components/weight/WeightChartSection';
+import StatCard from '@/components/ui/StatCard';
+import WeightHistoryList from '@/components/weight/WeightHistoryList';
+import { STATIC_GROWTH_DATA } from '@/data/growth_curve';
+import { calculateInterpolatedPercentile } from '@/lib/growthUtils'; // 👈 Import utility
 
 export default function WeightPage() {
-  // Fetch all weight events (oldest first for chart)
+  // 1. Fetch User Data
   const stmt = db.prepare(`
     SELECT * FROM events 
     WHERE type = 'WEIGHT' 
     ORDER BY startTime ASC 
-    LIMIT 100
   `);
   const weightEventsAsc = stmt.all() as any[];
+  const weightEventsDesc = [...weightEventsAsc].reverse();
 
-  // Reverse for display (newest first)
-  const weightEvents = [...weightEventsAsc].reverse();
-
-  // ========== STATISTICS CALCULATIONS ==========
-
-  // 1. First and latest weight
-  const firstWeight = weightEventsAsc.length > 0 
-    ? parseFloat(JSON.parse(weightEventsAsc[0].data || '{}').amount || 0)
-    : 0;
+  // ============================================================
+  // STATISTICS CALCULATIONS
+  // ============================================================
   
-  const latestWeight = weightEventsAsc.length > 0 
-    ? parseFloat(JSON.parse(weightEventsAsc[weightEventsAsc.length - 1].data || '{}').amount || 0)
-    : 0;
+  // Basic Stats
+  const firstEvent = weightEventsAsc[0];
+  const latestEvent = weightEventsAsc[weightEventsAsc.length - 1];
+  const prevEvent = weightEventsAsc[weightEventsAsc.length - 2];
+
+  const firstWeight = firstEvent ? parseFloat(JSON.parse(firstEvent.data).amount) : 0;
+  const latestWeight = latestEvent ? parseFloat(JSON.parse(latestEvent.data).amount) : 0;
+  const prevWeight = prevEvent ? parseFloat(JSON.parse(prevEvent.data).amount) : 0;
 
   const totalGain = latestWeight - firstWeight;
 
-  // 2. Prepare chart data
-  const chartData = weightEventsAsc.map(event => {
-    const data = JSON.parse(event.data || '{}');
-    return {
-      date: new Date(event.startTime).toLocaleDateString('en-GB', { 
-        day: 'numeric', 
-        month: 'short' 
-      }),
-      weight: parseFloat(data.amount) || 0
-    };
-  });
+  // -- 1. Current Percentile Calculation --
+  let currentPercentile = "—";
+  if (latestEvent) {
+    const pVal = calculateInterpolatedPercentile(
+      latestWeight, 
+      latestEvent.startTime, 
+      STATIC_GROWTH_DATA
+    );
+    if (pVal) currentPercentile = pVal;
+  }
 
-  // 3. Calculate weight change from previous entry
-  const getWeightChange = (currentIndex: number) => {
-    if (currentIndex >= weightEvents.length - 1) return null;
+  // -- 2. Recent Change (g and g/day) Calculation --
+  let changeString = "—";
+  let changeColor = "gray"; // default
+
+    // 1. Create variables "outside" so the Card can see them later
+  let weightDiffGrams = 0;
+  let rate = 0;
+  let hasHistory = false; // A flag to know if we should show "+" or "—"
+
+  // 2. Do the math "inside"
+  if (latestEvent && prevEvent) {
+    hasHistory = true;
+    const weightDiffKg = latestWeight - prevWeight;
     
-    const currentData = JSON.parse(weightEvents[currentIndex].data || '{}');
-    const previousData = JSON.parse(weightEvents[currentIndex + 1].data || '{}');
+    // Update the outer variables
+    weightDiffGrams = Math.round(weightDiffKg * 1000);
     
-    const currentWeight = parseFloat(currentData.amount);
-    const previousWeight = parseFloat(previousData.amount);
+    const timeDiffMs = new Date(latestEvent.startTime).getTime() - new Date(prevEvent.startTime).getTime();
+    const timeDiffDays = timeDiffMs / (1000 * 60 * 60 * 24);
     
-    if (isNaN(currentWeight) || isNaN(previousWeight)) return null;
+    rate = timeDiffDays > 0 ? Math.round(weightDiffGrams / timeDiffDays) : 0;
+  }
+
+
+  // ============================================================
+  // CHART DATA PREPARATION (Existing Logic)
+  // ============================================================
+  const userPoints = weightEventsAsc.map(event => ({
+    timestamp: new Date(event.startTime).getTime(),
+    weight: parseFloat(JSON.parse(event.data).amount) || 0,
+    isUser: true
+  }));
+
+  const referencePoints = STATIC_GROWTH_DATA.map(row => ({
+    timestamp: new Date(row.date).getTime(),
+    p15: row.p15, p25: row.p25, p50: row.p50, p75: row.p75, p85: row.p85,
+    isUser: false
+  }));
+
+  let shiftedReferencePoints: any[] = [];
+  if (userPoints.length > 0 && referencePoints.length > 0) {
+    const userStart = userPoints[0].timestamp; 
+    const whoStart = referencePoints[0].timestamp; 
+    const shiftAmount = whoStart - userStart; 
+    shiftedReferencePoints = referencePoints.map(pt => ({ ...pt, timestamp: pt.timestamp - shiftAmount }));
+  } else {
+    shiftedReferencePoints = referencePoints;
+  }
+
+    // ============================================================
+  // 5. INTELLIGENT MERGE (Fix for hanging dots)
+  // ============================================================
+  
+  // A. Determine the "Horizon" 
+  // (The later of: Current Real Time OR The Last Weight Entry)
+  const maxUserTime = userPoints.length > 0 
+    ? userPoints[userPoints.length - 1].timestamp 
+    : 0;
     
-    return currentWeight - previousWeight;
+  const horizonTime = Math.max(Date.now(), maxUserTime);
+
+  // B. Helper: Include WHO points up to the first one AFTER the horizon
+  // This ensures the line continues past the dot to the next "Month" marker.
+  const getRelevantReferencePoints = (points: any[]) => {
+    // 1. Find the first point that is strictly AFTER our horizon
+    const firstFuturePoint = points.find(pt => pt.timestamp > horizonTime);
+    
+    // 2. Determine the cutoff limit
+    // If we found a future point (e.g. Next Month), use that.
+    // If we didn't (end of chart), just use the horizon.
+    const limit = firstFuturePoint ? firstFuturePoint.timestamp : horizonTime;
+
+    return points.filter(pt => pt.timestamp <= limit);
   };
+
+  // C. Filter Reference Data
+  const relevantCorrected = getRelevantReferencePoints(referencePoints);
+  const relevantActual = getRelevantReferencePoints(shiftedReferencePoints);
+  
+  // D. Merge & Sort
+  const combinedCorrected = [...userPoints, ...relevantCorrected]
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const combinedActual = [...userPoints, ...relevantActual]
+    .sort((a, b) => a.timestamp - b.timestamp);
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
-      {/* Header */}
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">⚖️ Weight Log</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-300">⚖️ Weight Log</h1>
       </header>
 
-      {/* Statistics Cards */}
-      <section className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-cyan-50 dark:bg-cyan-900 p-4 rounded-xl">
-          <p className="text-cyan-600 dark:text-cyan-300 text-sm font-medium">Current Weight</p>
-          <p className="text-2xl font-bold text-cyan-900 dark:text-cyan-100">
-            {latestWeight > 0 ? `${latestWeight} kg` : '—'}
-          </p>
-        </div>
-        <div className={`p-4 rounded-xl ${totalGain >= 0 ? 'bg-green-50 dark:bg-green-900' : 'bg-red-50 dark:bg-red-900'}`}>
-          <p className={`text-sm font-medium ${totalGain >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
-            Total Change
-          </p>
-          <p className={`text-2xl font-bold ${totalGain >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
-            {totalGain > 0 ? '+' : ''}{totalGain.toFixed(2)} kg
-          </p>
-        </div>
+      {/* STATISTICS GRID: Now 2x2 */}
+      <section className="grid grid-cols-2 gap-3 mb-6">
+        
+        {/* Card 1: Current Weight */}
+        <StatCard 
+          label="Current Weight" 
+          value={latestWeight > 0 ? `${latestWeight} kg` : '—'} 
+          color="sky" 
+        />
+        
+        {/* Card 2: Current Percentile (New) */}
+        <StatCard 
+          label="Current Percentile" 
+          value={currentPercentile} 
+          color="blue" 
+        />
+
+        {/* 3 Absolute Change Card */}
+        <StatCard 
+          label="Lastest Change" 
+          // Logic: If no history, show "—". If history, show number with sign.
+          value={
+            !hasHistory 
+              ? "—" 
+              : `${weightDiffGrams > 0 ? '+' : ''}${weightDiffGrams} g`
+          } 
+          color={weightDiffGrams >= 0 ? 'green' : 'red'} 
+        />
+
+        {/* 4 Relative Change Card */}
+        <StatCard 
+          label="Growth Rate" 
+          value={
+             !hasHistory 
+               ? "—" 
+               : `${weightDiffGrams > 0 ? '+' : ''}${rate} g/day`
+          } 
+          color={weightDiffGrams >= 0 ? 'emerald' : 'fuchsia'} 
+        />
+
+        {/* Card 4: Total Gain 
+        <StatCard 
+          label="Total Gain" 
+          value={`${totalGain > 0 ? '+' : ''}${totalGain.toFixed(2)} kg`} 
+          color={totalGain >= 0 ? 'green' : 'red'} 
+        />*/}
+
       </section>
 
-      {/* Growth Chart (Client Component) */}
-      <WeightCharts chartData={chartData} />
+      {/* CHARTs */}
+      <WeightChartSection 
+        correctedData={combinedCorrected} 
+        actualData={combinedActual} 
+      />
 
-      {/* Weight List */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          All Entries
-        </h2>
-        {weightEvents.length === 0 ? (
-          <p className="text-gray-400 text-center italic mt-10">
-            No weight entries yet.
-          </p>
-        ) : (
-          weightEvents.map((event, index) => {
-            const eventData = JSON.parse(event.data || '{}');
-            const weight = eventData.amount || '?';
-            const change = getWeightChange(index);
-
-            return (
-              <div
-                key={event.id}
-                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="bg-cyan-100 dark:bg-cyan-900 p-2 rounded-full text-xl">
-                    ⚖️
-                  </span>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {formatDate(event.startTime)}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatTime(event.startTime)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-lg text-gray-900 dark:text-white">
-                    {weight} kg
-                  </p>
-                  {change !== null && (
-                    <p className={`text-xs font-medium ${
-                      change > 0 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : change < 0 
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-gray-500'
-                    }`}>
-                      {change > 0 ? '+' : ''}{change.toFixed(2)} kg
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </section>
+      {/* Weight List Component */}
+      <WeightHistoryList events={weightEventsDesc} />
 
     </main>
   );

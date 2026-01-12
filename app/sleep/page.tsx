@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import db from '@/lib/db';
 import SleepCharts from './SleepCharts';
 import SleepTimeline from '@/components/SleepTimeline'; 
+import StatCard from '@/components/ui/StatCard';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -314,7 +316,9 @@ export default function SleepPage() {
     ? (dailyNapCounts.reduce((a, b) => a + b, 0) / dailyNapCounts.length).toFixed(1)
     : "0.0";
   
-  // ========== 4. TIMELINE CHART DATA ==========
+    // ============================================================
+  // 4. TIMELINE CHART DATA (Updated for Ongoing Sleep)
+  // ============================================================
   
   const timelineData = [];
   const today = new Date();
@@ -330,8 +334,8 @@ export default function SleepPage() {
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
     
-    // 2. Find events for this specific date & Sort Chronologically
-    const daysEvents = completedSleeps
+    // 2. Find events (USE sleepEvents, NOT completedSleeps)
+    const daysEvents = sleepEvents
       .filter(e => getDateKey(e.startTime) === dateStr)
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     
@@ -340,60 +344,82 @@ export default function SleepPage() {
     
     let isNightChainActive = false;
     let lastEventEnd = 0; 
+    let lastEventEndHour = 0; // 👈 NEW: Track the hour when last sleep ended
 
-    // Use a standard for-loop so we can use index 'k' to look ahead
     for (let k = 0; k < daysEvents.length; k++) {
       const event = daysEvents[k];
       const start = new Date(event.startTime);
       const startH = start.getHours();
+      const startM = start.getMinutes();
       
+      // Handle Ongoing Sleep End Time for Calculation
+      const effectiveEndTime = event.endTime 
+        ? new Date(event.endTime).getTime() 
+        : Date.now();
+
       if (!isNightChainActive) {
         // --- ATTEMPT TO START CHAIN ---
-        // Trigger: Must start between 18:00 (6 PM) and 22:00 (10 PM)
         if (startH >= 18 && startH <= 22) {
           
-          // CHECK AHEAD: Is this a "False Start" (Evening Nap)?
-          // We look at the next event. If the gap is > 40 mins, we DON'T start the chain yet.
           let isFalseStart = false;
           const nextEvent = daysEvents[k + 1];
+          
+          // 1. Calculate duration of THIS sleep
+          const currentDurationMins = (effectiveEndTime - new Date(event.startTime).getTime()) / 60000;
 
-          if (nextEvent) {
-            const thisEnd = new Date(event.endTime).getTime();
+          if (nextEvent && event.endTime) {
             const nextStart = new Date(nextEvent.startTime).getTime();
-            const gapMins = (nextStart - thisEnd) / 60000;
+            const gapMins = (nextStart - effectiveEndTime) / 60000;
 
-            if (gapMins > 40) {
+            // It's a false start if the gap is large AND the sleep was short
+            if (gapMins > 45 && currentDurationMins < 90) {
               isFalseStart = true;
             }
+          } 
+          // Edge Case: Last event of the day
+          else if (event.endTime && currentDurationMins < 60) {
+            isFalseStart = true;
           }
 
-          // If it's NOT a false start (or it's the last sleep of the day), start the night mode.
           if (!isFalseStart) {
             isNightChainActive = true;
             nightSleepIds.add(event.id);
-            lastEventEnd = new Date(event.endTime).getTime();
+            lastEventEnd = effectiveEndTime;
+            
+            // 👈 NEW: Track when this sleep ended
+            const endDate = new Date(effectiveEndTime);
+            lastEventEndHour = endDate.getHours() + (endDate.getMinutes() / 60);
           }
-          // If it IS a false start, we do nothing. The loop continues to the next event 
-          // (e.g. the one at 20:00) and tries to start the chain there instead.
         }
       } else {
-        // --- CHAIN IS ACTIVE: END CONDITION ---
-        // We use the previous event's end time to check the gap
+        // --- CHAIN IS ACTIVE ---
         const currentStart = new Date(event.startTime).getTime();
-        const startM = start.getMinutes();
         const gapMins = (currentStart - lastEventEnd) / 60000;
-
-        // DEFINITION OF "MORNING" (After 04:30 AM)
-        const isAfter430 = (startH > 4) || (startH === 4 && startM >= 30);
         
-        // BREAK CONDITION:
-        // Gap > 40 mins AND we are past 04:30 AM
-        if (gapMins > 40 && isAfter430) {
-          isNightChainActive = false; // Stop the chain
+        // 👈 NEW CONDITION: Check if PREVIOUS sleep ended before 4:30 AM
+        // Convert to decimal: 4:30 = 4.5
+        const previousEndedBeforeMorning = lastEventEndHour < 4.5;
+
+        // Original "After 4:30" condition
+        const currentStartsAfter430 = (startH > 4) || (startH === 4 && startM >= 30);
+        
+        // BREAK CONDITION (Updated):
+        // Only break if:
+        // 1. Gap is large (> 40 mins)
+        // AND
+        // 2. Current sleep starts after 4:30
+        // AND
+        // 3. Previous sleep did NOT end before 4:30 (new rule)
+        if (gapMins > 40 && currentStartsAfter430 && !previousEndedBeforeMorning) {
+          isNightChainActive = false;
         } else {
-          // Keep the chain going (Split nights, or short morning snoozes)
+          // Keep the chain going
           nightSleepIds.add(event.id);
-          lastEventEnd = new Date(event.endTime).getTime();
+          lastEventEnd = effectiveEndTime;
+          
+          // 👈 Update the tracker
+          const endDate = new Date(effectiveEndTime);
+          lastEventEndHour = endDate.getHours() + (endDate.getMinutes() / 60);
         }
       }
     }
@@ -401,7 +427,9 @@ export default function SleepPage() {
     // 4. Generate Blocks for Visuals
     const blocks = daysEvents.map(e => {
       const start = new Date(e.startTime);
-      const end = new Date(e.endTime);
+      // If ongoing, use NOW as the end time for the visual bar
+      const end = e.endTime ? new Date(e.endTime) : new Date();
+      const isOngoing = !e.endTime; // 👈 Mark as ongoing
 
       let startHours = start.getHours() + (start.getMinutes() / 60);
       let endHours = end.getHours() + (end.getMinutes() / 60);
@@ -415,16 +443,18 @@ export default function SleepPage() {
       const left = (relativeStart / 24) * 100;
       const width = (durationVal / 24) * 100;
       
-      // Color is determined by the Set we filled above
       const isNight = nightSleepIds.has(e.id); 
 
-      const timeStr = `${formatTime(e.startTime)} - ${formatTime(e.endTime)}`;
+      const timeStr = `${formatTime(e.startTime)} - ${e.endTime ? formatTime(e.endTime) : 'Now'}`;
+      
+      // Calculate active duration for ongoing label
       const durationStr = getDuration(e.startTime, e.endTime);
 
       return { 
         left, 
         width, 
         isNight,
+        isOngoing, // 👈 Pass this to component
         info: { time: timeStr, duration: durationStr } 
       };
     });
@@ -520,67 +550,56 @@ export default function SleepPage() {
       
       {/* Header */}
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">😴 Sleep Log</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-300">😴 Sleep Log</h1>
       </header>
 
       {/* Statistics Cards */}
-      <section className="grid grid-cols-2 gap-2 mb-2">
+      <section className="grid grid-cols-2 gap-2 mb-4">
         
-        {/* ROW 1: Total Sleep & Night Sleep */}
-        <div className="bg-indigo-50 dark:bg-indigo-900 px-4 py-2 rounded-xl">
-          <p className="text-indigo-800 font-semibold dark:text-indigo-300 text-sm">Avg Total Sleep</p>
-          <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-100">
-            {medianDailyHours}h {medianDailyMins}m
-          </p>
-        </div>
+        {/* Total sleep card */}
+        <StatCard 
+          label="Avg Total Sleep" 
+          value={`${medianDailyHours}h ${medianDailyMins}m`} 
+          color="blue" 
+        />
 
-        <div className="bg-blue-50 dark:bg-blue-900 px-4 py-2 rounded-xl">
-          <p className="text-blue-800 font-semibold dark:text-blue-300 text-sm">Avg Night Sleep</p>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-100">
-            {medianNightHours > 0 ? `${medianNightHours}h ` : ''}{medianNightMins}m
-          </p>
-        </div>
+        {/* Night sleep card */}
+        <StatCard 
+          label="Avg Night Sleep" 
+          value={medianNightHours > 0 ? `${medianNightHours}h ${medianNightMins}m` : `${medianNightMins}m`}
+          color="indigo" 
+        />
 
-        {/* ROW 2: Nap Length & Naps per Day */}
-        <div className="bg-purple-50 dark:bg-purple-900 px-4 py-2 rounded-xl">
-          <p className="text-purple-800 font-semibold dark:text-purple-300 text-sm">Avg Nap Length</p>
-          <p className="text-2xl font-bold text-purple-800 dark:text-purple-100">
-            {medianNapHours > 0 ? `${medianNapHours}h ` : ''}{medianNapMins}m
-          </p>
-        </div>
+        {/* Nap Length*/}
+        <StatCard 
+          label="Avg Nap Length" 
+          value={medianNapHours > 0 ? `${medianNapHours}h ${medianNapMins}m` : `${medianNapMins}m`}
+          color="fuchsia" 
+        />
 
-        <div className="bg-fuchsia-50 dark:bg-fuchsia-900 px-4 py-2 rounded-xl">
-          <p className="text-fuchsia-800 font-semibold dark:text-fuchsia-300 text-sm">Avg Naps pr. Day</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-fuchsia-800 dark:text-fuchsia-100">
-              {avgNapsPerDay}
-            </p>
-          </div>
-        </div>
+        {/* Naps pr. day */}
+        <StatCard 
+          label="Avg Naps pr. Day" 
+          value={`${avgNapsPerDay}`}
+          color="purple" 
+        />
 
-      </section>
+        {/* Wake up time */}
+        <StatCard 
+          label="Avg Wake Up Time" 
+          value={`${medianWakeTime}`}
+          icon='☀️'
+          color="yellow" 
+        />
 
-      {/* 👇 NEW SECTION: Bedtime & Wake Up */}
-      <section className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-yellow-50 dark:bg-yellow-900 px-4 py-2 rounded-xl">
-          <p className="text-yellow-800 font-semibold dark:text-yellow-300 text-sm font-medium">Avg Wake Up Time</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl">☀️</span>
-            <p className="text-2xl font-bold text-yellow-800 dark:text-yellow-100">
-              {medianWakeTime}
-            </p>
-          </div>
-        </div>
+        {/* Bedtime */}
+        <StatCard 
+          label="Avg Bedtime" 
+          value={`${medianBedTime}`}
+          icon='🛌'
+          color="orange" 
+        />
 
-        <div className="bg-orange-50 dark:bg-orange-900 px-4 py-2 rounded-xl">
-          <p className="text-orange-800 font-semibold dark:text-orange-300 text-sm font-medium">Avg Bedtime</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl">🛌</span>
-            <p className="text-2xl font-bold text-orange-800 dark:text-orange-100">
-              {medianBedTime}
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* Charts (Client Component) */}
@@ -613,10 +632,10 @@ export default function SleepPage() {
             return (
               <div
                 key={event.id}
-                className={`p-4 rounded-lg shadow-sm border flex justify-between items-center ${
+                className={`p-4 rounded-lg flex justify-between items-center ${
                   isOngoing 
-                    ? 'bg-indigo-50 dark:bg-indigo-900 border-indigo-200 dark:border-indigo-700' 
-                    : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+                    ? 'bg-indigo-50 dark:bg-indigo-900' 
+                    : 'bg-sky-50 dark:bg-sky-950'
                 }`}
               >
                 <div>

@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic';
 
 import db from '@/lib/db';
 import DiaperCharts from './DiaperCharts';
+import StatCard from '@/components/ui/StatCard';
+import ChartCard from '@/components/ui/ChartCard'; 
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -94,23 +96,25 @@ export default function DiaperPage() {
       
       {/* Header */}
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">💩 Diaper Log</h1>
+        <h1 className="text-2xl font-bold dark:text-gray-300">💩 Diaper Log</h1>
       </header>
 
       {/* Statistics Cards */}
-      <section className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded-xl">
-          <p className="text-orange-600 dark:text-orange-300 text-sm font-medium">Per Day (Avg)</p>
-          <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-            {avgPerDay}
-          </p>
-        </div>
-        <div className="bg-amber-50 dark:bg-amber-900 p-4 rounded-xl">
-          <p className="text-amber-600 dark:text-amber-300 text-sm font-medium">Per Week (Avg)</p>
-          <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-            {avgPerWeek}
-          </p>
-        </div>
+      <section className="grid grid-cols-2 gap-4 mb-4">
+
+        {/* Per Day (Avg) */}
+        <StatCard 
+          label="Avg pr. day" 
+          value={`${avgPerDay}`} 
+          color="orange" 
+        />
+
+        {/* Time Between Feeds */}
+        <StatCard 
+          label="Avg pr. week" 
+          value={`${avgPerWeek}`} 
+          color="amber" 
+        />
       </section>
 
       {/* Charts (Client Component) */}
@@ -130,7 +134,7 @@ export default function DiaperPage() {
             return (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center"
+                className="bg-sky-50 dark:bg-sky-950 p-4 rounded-lg flex justify-between items-center"
               >
                 <div className="flex items-center gap-3">
                   <span className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full text-xl">
