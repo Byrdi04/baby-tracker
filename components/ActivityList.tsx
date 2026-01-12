@@ -137,9 +137,19 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
     setSelectedEvent(event);
     setEditTime(toInputFormat(event.startTime));
     setEditEndTime(event.endTime ? toInputFormat(event.endTime) : '');
+    
     const dataObj = JSON.parse(event.data || '{}');
-    setEditValue(dataObj.amount || '');
-    setEditNote(event.note || ''); // 👈 NEW: Load existing note
+    setEditNote(event.note || '');
+
+    // 👇 NEW LOGIC: Convert Kg to Grams for the input field
+    if (event.type === 'WEIGHT' && dataObj.amount) {
+      // e.g. "5.2" -> 5.2 -> 5200
+      const grams = Math.round(parseFloat(dataObj.amount) * 1000);
+      setEditValue(grams.toString());
+    } else {
+      // For Feeds (ml) or others, keep as is
+      setEditValue(dataObj.amount || '');
+    }
   };
 
   const handleDelete = async () => {
@@ -155,7 +165,18 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
   const handleSave = async () => {
     if (!selectedEvent) return;
     const currentData = JSON.parse(selectedEvent.data || '{}');
-    if (editValue) currentData.amount = editValue; 
+    
+    // 👇 NEW LOGIC: Convert Grams back to Kg for storage
+    if (editValue) {
+      if (selectedEvent.type === 'WEIGHT') {
+        // e.g. "5200" -> 5.2
+        const kg = parseFloat(editValue) / 1000;
+        currentData.amount = kg.toString(); 
+      } else {
+        // For Feeds, save as is
+        currentData.amount = editValue;
+      }
+    }
 
     await fetch('/api/events', {
       method: 'PATCH',
@@ -164,7 +185,7 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
         startTime: editTime, 
         endTime: editEndTime || null, 
         data: currentData,
-        note: editNote || null // 👈 NEW: Send the note
+        note: editNote || null 
       }),
     });
     setSelectedEvent(null);
@@ -290,8 +311,19 @@ export default function ActivityList({ initialEvents }: { initialEvents: EventRo
 
             {(selectedEvent.type === 'WEIGHT' || editValue !== '') && (
               <>
-                <label className="block text-sm text-gray-500 mb-1">Value (kg/ml)</label>
-                <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="w-full p-3 mb-6 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                {/* 👇 Dynamic Label */}
+                <label className="block text-sm text-gray-500 mb-1">
+                  {selectedEvent.type === 'WEIGHT' ? 'Weight (grams)' : 'Amount (ml)'}
+                </label>
+                
+                <input 
+                  type="number" 
+                  value={editValue} 
+                  onChange={(e) => setEditValue(e.target.value)} 
+                  className="w-full p-3 mb-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                  // Optional: Prevent decimals in the UI since we want grams
+                  step="1" 
+                />
               </>
             )}
 

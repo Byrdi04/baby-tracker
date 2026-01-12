@@ -140,9 +140,18 @@ export default function QuickButtons() {
     }
   };
 
-  const submitWeight = () => {
+    const submitWeight = () => {
     if (!weightValue) return; 
-    handleLog('WEIGHT', { amount: weightValue, unit: 'kg' });
+    
+    // 1. Parse the input (e.g., "7440")
+    const val = parseFloat(weightValue);
+
+    // 2. Divide by 1000 ONCE (7440 / 1000 = 7.44)
+    const kgValue = val / 1000;
+    
+    // 3. Send to handleLog (which should just send raw data, no math there)
+    handleLog('WEIGHT', { amount: kgValue.toString(), unit: 'kg' });
+    
     setWeightValue('');
     setShowWeightModal(false);
   };
@@ -325,7 +334,7 @@ export default function QuickButtons() {
         </div>
       )}
 
-      {/* --- WEIGHT MODAL --- */}
+            {/* --- WEIGHT MODAL --- */}
       {showWeightModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-sm">
@@ -333,14 +342,17 @@ export default function QuickButtons() {
             <div className="flex gap-2 mb-6">
               <input 
                 type="number" 
-                step="0.01"
-                placeholder="0.0" 
+                step="1"              // 👈 Changed from 0.01 to 1 (Integers only)
+                placeholder="weight in gram"    // 👈 Example in grams
                 value={weightValue}
                 onChange={(e) => setWeightValue(e.target.value)}
                 className="flex-1 p-3 border border-gray-300 rounded-lg text-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-cyan-500 outline-none"
                 autoFocus
               />
-              <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 px-4 rounded-lg font-semibold dark:text-gray-300">kg</div>
+              {/* 👇 Changed label from kg to g */}
+              <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-700 px-4 rounded-lg font-semibold dark:text-gray-300">
+                g
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowWeightModal(false)} className="flex-1 py-3 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
