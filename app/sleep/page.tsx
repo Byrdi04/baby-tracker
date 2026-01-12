@@ -316,146 +316,134 @@ export default function SleepPage() {
     ? (dailyNapCounts.reduce((a, b) => a + b, 0) / dailyNapCounts.length).toFixed(1)
     : "0.0";
   
-    // ============================================================
-  // 4. TIMELINE CHART DATA (Updated for Ongoing Sleep)
+  // ============================================================
+  // 4. TIMELINE CHART DATA (Overlapping Logic)
   // ============================================================
   
+  // A. PRE-CALCULATE NIGHT SLEEPS GLOBALLY
+  // We do this once for all events so categorization is consistent
+  const nightSleepIds = new Set<number>();
+  
+  // Sort all sleeps chronologically for analysis
+  const allSleepsSorted = [...sleepEvents].sort((a, b) => 
+    new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
+
+  let isNightChainActive = false;
+  let lastEventEnd = 0; 
+  let lastEventEndHour = 0;
+
+  for (let k = 0; k < allSleepsSorted.length; k++) {
+    const event = allSleepsSorted[k];
+    const start = new Date(event.startTime);
+    const startH = start.getHours();
+    const startM = start.getMinutes();
+    
+    const effectiveEndTime = event.endTime ? new Date(event.endTime).getTime() : Date.now();
+
+    if (!isNightChainActive) {
+      // Attempt Start
+      if (startH >= 18 && startH <= 22) {
+        let isFalseStart = false;
+        const currentDurationMins = (effectiveEndTime - start.getTime()) / 60000;
+        const nextEvent = allSleepsSorted[k + 1];
+
+        // Check False Start Logic
+        if (nextEvent && event.endTime) {
+          const nextStart = new Date(nextEvent.startTime).getTime();
+          const gapMins = (nextStart - effectiveEndTime) / 60000;
+          if (gapMins > 45 && currentDurationMins < 90) isFalseStart = true;
+        } 
+        else if (event.endTime && currentDurationMins < 60) isFalseStart = true;
+
+        if (!isFalseStart) {
+          isNightChainActive = true;
+          nightSleepIds.add(event.id);
+          lastEventEnd = effectiveEndTime;
+          const ed = new Date(effectiveEndTime);
+          lastEventEndHour = ed.getHours() + (ed.getMinutes()/60);
+        }
+      }
+    } else {
+      // Chain Active
+      const currentStart = start.getTime();
+      const gapMins = (currentStart - lastEventEnd) / 60000;
+      
+      const previousEndedBeforeMorning = lastEventEndHour < 4.5;
+      const currentStartsAfter430 = (startH > 4) || (startH === 4 && startM >= 30);
+
+      // Break Condition
+      if (gapMins > 40 && currentStartsAfter430 && !previousEndedBeforeMorning) {
+        isNightChainActive = false;
+      } else {
+        nightSleepIds.add(event.id);
+        lastEventEnd = effectiveEndTime;
+        const ed = new Date(effectiveEndTime);
+        lastEventEndHour = ed.getHours() + (ed.getMinutes()/60);
+      }
+    }
+  }
+
+  // B. GENERATE TIMELINE ROWS (With Splitting Logic)
   const timelineData = [];
   const today = new Date();
+  // Adjust "today" to respect the 7am-7am cycle
   if (today.getHours() < 7) today.setDate(today.getDate() - 1);
-
+  
+  // Create 7 days of rows
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     
-    // 1. Generate Local Date String
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
+    // 1. Define the Window for this Row: 07:00 D to 07:00 D+1
+    const rowStart = new Date(d);
+    rowStart.setHours(7, 0, 0, 0);
     
-    // 2. Find events (USE sleepEvents, NOT completedSleeps)
-    const daysEvents = sleepEvents
-      .filter(e => getDateKey(e.startTime) === dateStr)
-      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const rowEnd = new Date(rowStart);
+    rowEnd.setDate(rowEnd.getDate() + 1); // Add 24h
     
-        // 3. LOGIC: Smart Night Sleep Detection
-    const nightSleepIds = new Set<number>();
-    
-    let isNightChainActive = false;
-    let lastEventEnd = 0; 
-    let lastEventEndHour = 0; // 👈 NEW: Track the hour when last sleep ended
+    const rowStartMs = rowStart.getTime();
+    const rowEndMs = rowEnd.getTime();
+    const dayDurationMs = 24 * 60 * 60 * 1000;
 
-    for (let k = 0; k < daysEvents.length; k++) {
-      const event = daysEvents[k];
-      const start = new Date(event.startTime);
-      const startH = start.getHours();
-      const startM = start.getMinutes();
-      
-      // Handle Ongoing Sleep End Time for Calculation
-      const effectiveEndTime = event.endTime 
-        ? new Date(event.endTime).getTime() 
-        : Date.now();
+    // 2. Find events that OVERLAP this window
+    // Condition: EventStart < RowEnd AND EventEnd > RowStart
+    const rowBlocks = allSleepsSorted.filter(e => {
+      const eStart = new Date(e.startTime).getTime();
+      const eEnd = e.endTime ? new Date(e.endTime).getTime() : Date.now();
+      return eStart < rowEndMs && eEnd > rowStartMs;
+    });
 
-      if (!isNightChainActive) {
-        // --- ATTEMPT TO START CHAIN ---
-        if (startH >= 18 && startH <= 22) {
-          
-          let isFalseStart = false;
-          const nextEvent = daysEvents[k + 1];
-          
-          // 1. Calculate duration of THIS sleep
-          const currentDurationMins = (effectiveEndTime - new Date(event.startTime).getTime()) / 60000;
+    // 3. Map to Visual Blocks
+    const blocks = rowBlocks.map(e => {
+      const eStartMs = new Date(e.startTime).getTime();
+      const eEndMs = e.endTime ? new Date(e.endTime).getTime() : Date.now();
+      const isOngoing = !e.endTime;
 
-          if (nextEvent && event.endTime) {
-            const nextStart = new Date(nextEvent.startTime).getTime();
-            const gapMins = (nextStart - effectiveEndTime) / 60000;
+      // CLAMPING: 
+      // If starts before row, cut it to row start.
+      // If ends after row, cut it to row end.
+      const visStartMs = Math.max(eStartMs, rowStartMs);
+      const visEndMs = Math.min(eEndMs, rowEndMs);
 
-            // It's a false start if the gap is large AND the sleep was short
-            if (gapMins > 45 && currentDurationMins < 90) {
-              isFalseStart = true;
-            }
-          } 
-          // Edge Case: Last event of the day
-          else if (event.endTime && currentDurationMins < 60) {
-            isFalseStart = true;
-          }
+      // Calculate Position %
+      // (VisualStart - RowStart) / 24h
+      const relativeStartMs = visStartMs - rowStartMs;
+      const durationMs = visEndMs - visStartMs;
 
-          if (!isFalseStart) {
-            isNightChainActive = true;
-            nightSleepIds.add(event.id);
-            lastEventEnd = effectiveEndTime;
-            
-            // 👈 NEW: Track when this sleep ended
-            const endDate = new Date(effectiveEndTime);
-            lastEventEndHour = endDate.getHours() + (endDate.getMinutes() / 60);
-          }
-        }
-      } else {
-        // --- CHAIN IS ACTIVE ---
-        const currentStart = new Date(event.startTime).getTime();
-        const gapMins = (currentStart - lastEventEnd) / 60000;
-        
-        // 👈 NEW CONDITION: Check if PREVIOUS sleep ended before 4:30 AM
-        // Convert to decimal: 4:30 = 4.5
-        const previousEndedBeforeMorning = lastEventEndHour < 4.5;
+      const left = (relativeStartMs / dayDurationMs) * 100;
+      const width = (durationMs / dayDurationMs) * 100;
 
-        // Original "After 4:30" condition
-        const currentStartsAfter430 = (startH > 4) || (startH === 4 && startM >= 30);
-        
-        // BREAK CONDITION (Updated):
-        // Only break if:
-        // 1. Gap is large (> 40 mins)
-        // AND
-        // 2. Current sleep starts after 4:30
-        // AND
-        // 3. Previous sleep did NOT end before 4:30 (new rule)
-        if (gapMins > 40 && currentStartsAfter430 && !previousEndedBeforeMorning) {
-          isNightChainActive = false;
-        } else {
-          // Keep the chain going
-          nightSleepIds.add(event.id);
-          lastEventEnd = effectiveEndTime;
-          
-          // 👈 Update the tracker
-          const endDate = new Date(effectiveEndTime);
-          lastEventEndHour = endDate.getHours() + (endDate.getMinutes() / 60);
-        }
-      }
-    }
-
-    // 4. Generate Blocks for Visuals
-    const blocks = daysEvents.map(e => {
-      const start = new Date(e.startTime);
-      // If ongoing, use NOW as the end time for the visual bar
-      const end = e.endTime ? new Date(e.endTime) : new Date();
-      const isOngoing = !e.endTime; // 👈 Mark as ongoing
-
-      let startHours = start.getHours() + (start.getMinutes() / 60);
-      let endHours = end.getHours() + (end.getMinutes() / 60);
-
-      if (startHours < 7) startHours += 24;
-      if (endHours < 7) endHours += 24;
-      
-      const relativeStart = startHours - 7;
-      const durationVal = endHours - startHours;
-
-      const left = (relativeStart / 24) * 100;
-      const width = (durationVal / 24) * 100;
-      
-      const isNight = nightSleepIds.has(e.id); 
-
+      // Info text (Show real full time, not clipped time)
       const timeStr = `${formatTime(e.startTime)} - ${e.endTime ? formatTime(e.endTime) : 'Now'}`;
-      
-      // Calculate active duration for ongoing label
       const durationStr = getDuration(e.startTime, e.endTime);
 
-      return { 
-        left, 
-        width, 
-        isNight,
-        isOngoing, // 👈 Pass this to component
-        info: { time: timeStr, duration: durationStr } 
+      return {
+        left,
+        width,
+        isNight: nightSleepIds.has(e.id),
+        isOngoing,
+        info: { time: timeStr, duration: durationStr }
       };
     });
 
