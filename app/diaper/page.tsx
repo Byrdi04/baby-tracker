@@ -38,12 +38,12 @@ const getWeekKey = (dateStr: string): string => {
 };
 
 export default function DiaperPage() {
-  // Fetch all diaper events
+  // 1. Fetch more history (Increased to 1000 for better long-term averages)
   const stmt = db.prepare(`
     SELECT * FROM events 
     WHERE type = 'DIAPER' 
     ORDER BY startTime DESC 
-    LIMIT 100
+    LIMIT 1000
   `);
   const diaperEvents = stmt.all() as any[];
 
@@ -51,42 +51,59 @@ export default function DiaperPage() {
   // STATISTICS CALCULATIONS
   // ============================================================
 
-  // 1. Changes per day (Count AND Notes)
-  // Structure: { "2024-01-01": { count: 5, notes: ["Rash", " Huge"] } }
+  // --- A. DATA AGGREGATION (For Charts) ---
+  // We still need to group data for the charts and notes
   const dailyData: { [key: string]: { count: number, notes: string[] } } = {};
+  const diapersByWeek: { [key: string]: number } = {};
 
   diaperEvents.forEach(event => {
+    // Daily Grouping
     const dateKey = getDateKey(event.startTime);
-    
     if (!dailyData[dateKey]) {
       dailyData[dateKey] = { count: 0, notes: [] };
     }
-    
     dailyData[dateKey].count++;
     if (event.note) {
       dailyData[dateKey].notes.push(event.note);
     }
-  });
-  
-  // Calculate Avg (Logic slightly changed to access .count)
-  const daysWithData = Object.values(dailyData);
-  const avgPerDay = daysWithData.length > 0 
-    ? Math.round(daysWithData.reduce((a, b) => a + b.count, 0) / daysWithData.length * 10) / 10
-    : 0;
 
-  // 2. Changes per week (Keep simple count logic)
-  const diapersByWeek: { [key: string]: number } = {};
-  diaperEvents.forEach(event => {
+    // Weekly Grouping
     const weekKey = getWeekKey(event.startTime);
     diapersByWeek[weekKey] = (diapersByWeek[weekKey] || 0) + 1;
   });
-  
-  const weeklyCounts = Object.values(diapersByWeek);
-  const avgPerWeek = weeklyCounts.length > 0 
-    ? Math.round(weeklyCounts.reduce((a, b) => a + b, 0) / weeklyCounts.length * 10) / 10
-    : 0;
 
-  // 3. Prepare daily chart data (Fill empty days)
+  // --- B. AVERAGES CALCULATION (Corrected Time Span) ---
+  
+  let avgPerDay = 0;
+  let avgPerWeek = 0;
+  const totalDiapers = diaperEvents.length;
+
+  if (totalDiapers > 0) {
+    // 1. Find the Oldest Entry (Start of tracking)
+    const oldestTime = new Date(diaperEvents[totalDiapers - 1].startTime).getTime();
+    
+    // 2. End of tracking is NOW (Current moment)
+    // This ensures that empty days at the end of the period count towards the average.
+    const now = Date.now();
+    
+    // 3. Calculate difference
+    const diffMs = now - oldestTime;
+    
+    // Convert to Days. 
+    // We use Math.max(1, ...) so if you just started 1 hour ago, 
+    // we divide by 1 day instead of 0.04 days (which would give a huge fake average).
+    const diffDays = Math.max(1, diffMs / (1000 * 60 * 60 * 24));
+    
+    const diffWeeks = diffDays / 7;
+
+    // 4. Calculate Rates
+    avgPerDay = Math.round((totalDiapers / diffDays) * 10) / 10;
+    avgPerWeek = Math.round((totalDiapers / diffWeeks) * 10) / 10;
+  }
+
+  // --- C. CHART DATA PREPARATION ---
+
+  // 1. Prepare daily chart data (Fill empty days for last 7 days)
   const dailyChartData = [];
   
   for (let i = 6; i >= 0; i--) {
@@ -100,11 +117,11 @@ export default function DiaperPage() {
     dailyChartData.push({
       date: label,
       changes: dayEntry ? dayEntry.count : 0,
-      notes: dayEntry ? dayEntry.notes : [] // 👈 Pass the array of notes
+      notes: dayEntry ? dayEntry.notes : [] // Pass the notes for the bubbles
     });
   }
 
-  // 4. Prepare weekly chart data
+  // 2. Prepare weekly chart data (Last 4 weeks)
   const weeklyChartData = Object.entries(diapersByWeek)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-4)
@@ -131,7 +148,7 @@ export default function DiaperPage() {
           color="orange" 
         />
 
-        {/* Time Between Feeds */}
+        {/* Per Week (Avg) */}
         <StatCard 
           label="Avg pr. week" 
           value={`${avgPerWeek}`} 
