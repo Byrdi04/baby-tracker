@@ -5,6 +5,7 @@ import FeedCharts from './FeedCharts';
 import FeedTimeline from '@/components/FeedTimeline';
 import StatCard from '@/components/ui/StatCard';
 import ChartCard from '@/components/ui/ChartCard'; 
+import EventList from '@/components/events/EventList';
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -230,45 +231,9 @@ export default function FeedPage() {
       <FeedCharts chartData={chartData} />
 
       {/* Feed List */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          All Entries
-        </h2>
-        {feedEvents.length === 0 ? (
-          <p className="text-gray-400 text-center italic mt-10">
-            No feed entries yet.
-          </p>
-        ) : (
-          feedEvents.map((event) => {
-            const eventData = JSON.parse(event.data || '{}');
-            const feedType = eventData.feedType || 'Unknown';
-            const style = getFeedStyle(feedType);
-
-            return (
-              <div
-                key={event.id}
-                className="bg-sky-50 dark:bg-sky-950 p-4 rounded-lg flex justify-between items-center"
-              >
-                <div className="flex items-center gap-3">
-                  <span className={`${style.bg} p-2 rounded-full text-xl`}>
-                    {style.icon}
-                  </span>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {formatDate(event.startTime)}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatTime(event.startTime)}
-                    </p>
-                  </div>
-                </div>
-                <div className={`px-3 py-1 rounded-full text-sm font-semibold ${style.bg} ${style.text}`}>
-                  {feedType}
-                </div>
-              </div>
-            );
-          })
-        )}
+      <section>
+        <h2>All Entries</h2>
+        <EventList events={feedEvents} /> 
       </section>
 
     </main>

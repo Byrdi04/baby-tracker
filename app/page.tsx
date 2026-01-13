@@ -1,6 +1,6 @@
 import db from '@/lib/db';
 import QuickButtons from '@/components/QuickButtons';
-import ActivityList from '@/components/ActivityList'; // Import the new component
+import EventList from '@/components/events/EventList';
 export const dynamic = "force-dynamic";
 
 export default function Home() {
@@ -21,7 +21,7 @@ export default function Home() {
         </h2>
         
         {/* Pass the data to the Client Component */}
-        <ActivityList initialEvents={events} />
+        <EventList events={events} />
         
       </section>
     </main>

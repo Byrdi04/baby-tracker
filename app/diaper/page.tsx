@@ -4,6 +4,7 @@ import db from '@/lib/db';
 import DiaperCharts from './DiaperCharts';
 import StatCard from '@/components/ui/StatCard';
 import ChartCard from '@/components/ui/ChartCard'; 
+import EventList from '@/components/events/EventList';
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -160,41 +161,9 @@ export default function DiaperPage() {
       <DiaperCharts dailyChartData={dailyChartData} weeklyChartData={weeklyChartData} />
 
       {/* Diaper List */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          All Entries
-        </h2>
-        {diaperEvents.length === 0 ? (
-          <p className="text-gray-400 text-center italic mt-10">
-            No diaper entries yet.
-          </p>
-        ) : (
-          diaperEvents.map((event) => {
-            return (
-              <div
-                key={event.id}
-                className="bg-sky-50 dark:bg-sky-950 p-4 rounded-lg flex justify-between items-center"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full text-xl">
-                    💩
-                  </span>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {formatDate(event.startTime)}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatTime(event.startTime)}
-                    </p>
-                  </div>
-                </div>
-                <div className="px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-100">
-                  {formatTime(event.startTime)}
-                </div>
-              </div>
-            );
-          })
-        )}
+      <section>
+        <h2>All Entries</h2>
+        <EventList events={diaperEvents} /> 
       </section>
 
     </main>

@@ -4,11 +4,11 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 
 ## 📱 General issues
 
-- [ ] An entry should be editable from the activity log on the individual pages
+- [x] An entry should be editable from the activity log on the individual pages
 
 ## 🏠 Home
 
-- [ ] Make the start of the note visible on the card in the acitivity log
+- [x] Make the start of the note visible on the card in the acitivity log
 - [x] Change meds into vitamins on button and log card
 - [x] Fix colors for feeding options, so that they match the feeding page
 - [x] Fix background colors on the log cards, so they match the buttons
@@ -40,7 +40,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Fix distance on x-axis on chart
 - [x] Make import of WHO growth rates, based on gender and birthday
 - [x] Make chart scrollable and zoomable
-- [ ] Enter weight in gram
+- [x] Enter weight in gram
 
 ## 📊 Other aspects
 

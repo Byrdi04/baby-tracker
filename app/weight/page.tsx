@@ -3,9 +3,9 @@ export const dynamic = 'force-dynamic';
 import db from '@/lib/db';
 import WeightChartSection from '@/components/weight/WeightChartSection';
 import StatCard from '@/components/ui/StatCard';
-import WeightHistoryList from '@/components/weight/WeightHistoryList';
 import { STATIC_GROWTH_DATA } from '@/data/growth_curve';
 import { calculateInterpolatedPercentile } from '@/lib/growthUtils'; // 👈 Import utility
+import EventList from '@/components/events/EventList';
 
 export default function WeightPage() {
   // 1. Fetch User Data
@@ -192,7 +192,10 @@ export default function WeightPage() {
       />
 
       {/* Weight List Component */}
-      <WeightHistoryList events={weightEventsDesc} />
+      <section>
+        <h2>All Entries</h2>
+        <EventList events={weightEventsDesc} /> 
+      </section>
 
     </main>
   );

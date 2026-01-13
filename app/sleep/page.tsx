@@ -5,6 +5,7 @@ import SleepCharts from './SleepCharts';
 import SleepTimeline from '@/components/SleepTimeline'; 
 import StatCard from '@/components/ui/StatCard';
 import ChartCard from '@/components/ui/ChartCard'; 
+import EventList from '@/components/events/EventList';
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -604,48 +605,9 @@ export default function SleepPage() {
       />
 
       {/* Sleep List */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          All Entries
-        </h2>
-        {sleepEvents.length === 0 ? (
-          <p className="text-gray-400 text-center italic mt-10">
-            No sleep entries yet.
-          </p>
-        ) : (
-          sleepEvents.map((event) => {
-            const duration = getDuration(event.startTime, event.endTime);
-            const isOngoing = !event.endTime;
-
-            return (
-              <div
-                key={event.id}
-                className={`p-4 rounded-lg flex justify-between items-center ${
-                  isOngoing 
-                    ? 'bg-indigo-50 dark:bg-indigo-900' 
-                    : 'bg-sky-50 dark:bg-sky-950'
-                }`}
-              >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(event.startTime)}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {formatTime(event.startTime)}
-                    {event.endTime && ` - ${formatTime(event.endTime)}`}
-                  </p>
-                </div>
-                <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  isOngoing
-                    ? 'bg-indigo-200 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
-                }`}>
-                  {duration}
-                </div>
-              </div>
-            );
-          })
-        )}
+      <section>
+        <h2>All Entries</h2>
+        <EventList events={sleepEvents} /> 
       </section>
 
     </main>
