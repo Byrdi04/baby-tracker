@@ -2,7 +2,7 @@
 import { ReactNode } from 'react';
 
 interface ChartCardProps {
-  title: string;
+  title?: string;
   children: ReactNode;
   className?: string; // Allow extra styling if needed
 }
@@ -14,6 +14,7 @@ export default function ChartCard({ title, children, className = '' }: ChartCard
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
         {title}
       </h3>
+      
       {children}
     </div>
   );
