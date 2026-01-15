@@ -44,7 +44,7 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
             <BarChart data={sleepProbabilityData} barCategoryGap={0}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
               <XAxis dataKey="time" tick={{ fontSize: 10 }} interval={17} />
-              <YAxis tick={{ fontSize: 12 }} unit="%" width={35} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} />
+              <YAxis tick={{ fontSize: 12 }} unit="%" width={35} domain={[20, 100]} ticks={[20, 40, 60, 80, 100]} allowDataOverflow={true} />
               <Tooltip formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Chance']} contentStyle={{ borderRadius: '8px' }} />
               <Bar dataKey="percent" fill="#34a0cf" radius={[2, 2, 0, 0]} />
             </BarChart>
