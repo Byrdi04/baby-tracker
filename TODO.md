@@ -44,7 +44,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Make chart scrollable and zoomable
 - [x] Enter weight in gram
 - [x] Add percentile to tooltip
-- [ ] Change change over time to cover several measurements
+- [x] Change change over time to cover several measurements
 
 ## 📊 Other aspects
 
