@@ -52,6 +52,7 @@ export default function SleepPage() {
       <SleepCharts 
         chartData={chartData} 
         trendData={trendData}
+        napDurationData={napDurationData} 
         napStartTimeData={napStartTimeData} 
         sleepProbabilityData={sleepProbabilityData}
       />
