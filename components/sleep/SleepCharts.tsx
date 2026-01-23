@@ -189,7 +189,7 @@ export default function SleepCharts({ chartData, trendData, napDurationData, nap
         </div>
       </ChartCard>
 
-      {/* 4. Nap Duration Histogram */}
+      {/* 4. Nap Duration Histogram 
       <ChartCard title="Nap Duration Distribution">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
@@ -201,7 +201,7 @@ export default function SleepCharts({ chartData, trendData, napDurationData, nap
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </ChartCard>
+      </ChartCard>*/}
 
     </section>
   );

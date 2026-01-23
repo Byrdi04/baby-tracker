@@ -15,6 +15,7 @@ type CombinedDataPoint = {
   p50?: number;
   p75?: number;
   p85?: number;
+  percentile?: string;
   isUser?: boolean;
 };
 
@@ -27,15 +28,16 @@ type Props = {
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
-  // ... (Keep existing tooltip logic exactly as is) ...
   if (active && payload && payload.length) {
     const dateStr = new Date(label).toLocaleDateString('en-GB', {
       weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
     });
+    
     const sortedPayload = [...payload].sort((a: any, b: any) => {
       if (a.name === 'weight') return -1;
       return 1;
     });
+
     return (
       <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm p-3 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl text-xs">
         <p className="font-bold text-gray-700 dark:text-gray-200 mb-2 border-b border-gray-100 dark:border-gray-800 pb-1">
@@ -43,15 +45,27 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         </p>
         <div className="flex flex-col gap-1">
           {sortedPayload.map((entry: any, index: number) => {
-            const name = entry.name === 'weight' ? 'Baby' : entry.name.toUpperCase();
             const isBaby = entry.name === 'weight';
+            const name = isBaby ? 'Baby' : entry.name.toUpperCase();
+            
+            // Access the percentile passed from the page
+            // entry.payload is the data object for this specific dot
+            const percentile = entry.payload.percentile;
+
             return (
               <div key={index} className={`flex items-center justify-between gap-4 ${isBaby ? 'font-bold text-sm' : 'text-gray-500'}`}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <span>{name}</span>
+                <div className="text-right">
+                  <span className="ml-1.5 text-xs font-sm text-gray-900 dark:text-gray-200">
+                    {Number(entry.value).toFixed(2)} kg 
+                  </span>
+                  
+                  {/* 👈 Show percentile only for Baby */}
+                  {isBaby && percentile && (
+                    <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">
+                      ({percentile})
+                    </span>
+                  )}
                 </div>
-                <span>{Number(entry.value).toFixed(2)} kg</span>
               </div>
             );
           })}

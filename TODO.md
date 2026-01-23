@@ -43,7 +43,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Make import of WHO growth rates, based on gender and birthday
 - [x] Make chart scrollable and zoomable
 - [x] Enter weight in gram
-- [ ] Add percentile to tooltip
+- [x] Add percentile to tooltip
 - [ ] Change change over time to cover several measurements
 
 ## 📊 Other aspects
