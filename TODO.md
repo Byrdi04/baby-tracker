@@ -19,9 +19,11 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Fix nighttime logic
 - [x] Make limit for sleep probability 20%
 - [x] Delete nap start times chart
-- [ ] Display nighttime sleep on the total sleep chart, and change into 7-7 intervals
-- [ ] Add something with time between naps
+- [x] Display nighttime sleep on the total sleep chart, and change into 7-7 intervals
+- [x] Change naps, so they belong to the same day between nights
 - [x] Fix sleep that goes accros days
+- [x] Add chart on development on nap, nighttime and total sleep
+- [x] Add total sleep to tooltip
 
 ## 👩‍🍼 Feed
 
@@ -41,6 +43,8 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Make import of WHO growth rates, based on gender and birthday
 - [x] Make chart scrollable and zoomable
 - [x] Enter weight in gram
+- [ ] Add percentile to tooltip
+- [ ] Change change over time to cover several measurements
 
 ## 📊 Other aspects
 

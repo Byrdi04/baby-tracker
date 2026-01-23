@@ -1,6 +1,9 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { 
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, 
+  ResponsiveContainer, CartesianGrid 
+} from 'recharts';
 import ChartCard from '@/components/ui/ChartCard'; 
 
 type ChartDataPoint = {
@@ -13,27 +16,65 @@ type ProbabilityPoint = {
   percent: number; 
 };
 
-// 1. Update Props Type
+type TrendPoint = {
+  date: string;
+  total: number;
+  night: number;
+  nap: number;
+};
+
 type Props = {
-  // changed from 'hours' to split values
   chartData: { date: string; nightHours: number; napHours: number }[]; 
+  trendData: TrendPoint[];
   napDurationData: ChartDataPoint[];
   napStartTimeData: ChartDataPoint[];
   sleepProbabilityData: ProbabilityPoint[];
 };
 
-const CustomTick = (props: any) => {
-  const { x, y, payload } = props;
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={4} textAnchor="end" fill="#9CA3AF" transform="rotate(-90)" fontSize={10}>
-        {payload.value}
-      </text>
-    </g>
-  );
+// --- Custom Tooltip for Stacked Bar Chart ---
+const CustomBarTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const total = (data.nightHours + data.napHours).toFixed(1);
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 border border-gray-100 dark:border-gray-700 shadow-xl rounded-xl text-xs z-50">
+        <p className="font-bold mb-2 text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 pb-1">{label}</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+             <span className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100" />
+             <span className="text-gray-600 dark:text-gray-300">Total:</span>
+             <span className="font-bold text-gray-900 dark:text-white ml-auto">{total}h</span>
+          </div>
+          <div className="flex items-center gap-2">
+             <span className="w-2 h-2 rounded-full bg-[#c084fc]" />
+             <span className="text-gray-500 dark:text-gray-400">Nap:</span>
+             <span className="font-medium text-gray-700 dark:text-gray-300 ml-auto">{data.napHours}h</span>
+          </div>
+          <div className="flex items-center gap-2">
+             <span className="w-2 h-2 rounded-full bg-[#3b82f6]" />
+             <span className="text-gray-500 dark:text-gray-400">Night:</span>
+             <span className="font-medium text-gray-700 dark:text-gray-300 ml-auto">{data.nightHours}h</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
 };
 
-export default function SleepCharts({ chartData, napDurationData, napStartTimeData, sleepProbabilityData }: Props) {
+// --- Custom Tick for Histogram ---
+const CustomTick = (props: any) => {
+    const { x, y, payload } = props;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={0} dy={4} textAnchor="end" fill="#9CA3AF" transform="rotate(-90)" fontSize={10}>
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+
+export default function SleepCharts({ chartData, trendData, napDurationData, napStartTimeData, sleepProbabilityData }: Props) {
   return (
     <section className="space-y-6 mb-4">
       
@@ -54,23 +95,18 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
 
       {/* 2. Daily Sleep Chart (STACKED) */}
       <ChartCard>
-
-        {/* 👈 2. Add this Custom Header Section */}
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
             Sleep per Day <span className="text-sm font-normal text-gray-500">(Last 7 Days)</span>
           </h3>
           
-          {/* Custom Legend (Right Aligned) */}
           <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
-            {/* Nap Legend Item */}
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#c084fc]" /> {/* Purple */}
+              <div className="h-2.5 w-2.5 rounded-full bg-[#c084fc]" /> 
               <span>Nap</span>
             </div>
-            {/* Night Legend Item */}
             <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#3b82f6]" /> {/* Indigo */}
+              <div className="h-2.5 w-2.5 rounded-full bg-[#3b82f6]" /> 
               <span>Night</span>
             </div>
           </div>
@@ -83,33 +119,77 @@ export default function SleepCharts({ chartData, napDurationData, napStartTimeDa
               <XAxis dataKey="date" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} width={30} unit="h" />
               
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px' }}
-                cursor={{ fill: 'transparent' }}
-              />
+              <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'transparent' }} />
               
-              {/* 1. Night Sleep (Bottom) - Defined FIRST */}
-              <Bar 
-                dataKey="nightHours" 
-                name="Night" 
-                stackId="a" 
-                fill="#3b82f6" // Indigo
-              />
-              
-              {/* 2. Naps (Top) - Defined SECOND */}
-              <Bar 
-                dataKey="napHours" 
-                name="Nap" 
-                stackId="a" 
-                fill="#c084fc" // Purple
-                radius={[4, 4, 0, 0]} // Rounded corners only on the top bar
-              />
+              <Bar dataKey="nightHours" name="Night" stackId="a" fill="#3b82f6" />
+              <Bar dataKey="napHours" name="Nap" stackId="a" fill="#c084fc" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </ChartCard>
 
-      {/* 3. Nap Duration Histogram */}
+      {/* 3. Sleep Trends Line Chart (Last 30 Days) */}
+            {/* 3. NEW: Sleep Trends Line Chart (Last 30 Days) */}
+      <ChartCard>
+        <div className="flex flex-wrap items-center justify-between mb-2 gap-y-1">
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mr-2">
+            Sleep Trends
+          </h3>
+          
+          {/* Custom Legend */}
+          <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
+            
+            {/* Total (Thick Gray Line) */}
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="rounded-full" 
+                style={{ width: '16px', height: '4px', backgroundColor: '#374151' }} 
+              />
+              <span>Total</span>
+            </div>
+
+            {/* Nap (Thin Purple Line) */}
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="rounded-full" 
+                style={{ width: '16px', height: '2px', backgroundColor: '#c084fc' }} 
+              />
+              <span>Nap</span>
+            </div>
+
+            {/* Night (Thin Blue Line) */}
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="rounded-full" 
+                style={{ width: '16px', height: '2px', backgroundColor: '#3b82f6' }} 
+              />
+              <span>Night</span>
+            </div>
+
+          </div>
+        </div>
+
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={4} />
+              <YAxis tick={{ fontSize: 12 }} width={30} unit="h" domain={[0, 'auto']} />
+              
+              <Tooltip 
+                 contentStyle={{ borderRadius: '8px' }}
+                 itemStyle={{ fontSize: '12px', padding: 0 }}
+              />
+              
+              <Line type="monotone" dataKey="total" name="Total" stroke="#374151" strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="night" name="Night" stroke="#3b82f6" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="nap" name="Nap" stroke="#c084fc" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </ChartCard>
+
+      {/* 4. Nap Duration Histogram */}
       <ChartCard title="Nap Duration Distribution">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">

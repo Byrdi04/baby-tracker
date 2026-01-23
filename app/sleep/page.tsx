@@ -19,7 +19,6 @@ export default function SleepPage() {
     SELECT * FROM events 
     WHERE type = 'SLEEP' 
     ORDER BY startTime DESC 
-    LIMIT 500
   `);
   const sleepEvents = stmt.all() as any[];
 
@@ -29,6 +28,7 @@ export default function SleepPage() {
     completedSleeps, 
     stats, 
     chartData, 
+    trendData,
     napDurationData, 
     napStartTimeData 
   } = processSleepStats(sleepEvents);
@@ -51,6 +51,7 @@ export default function SleepPage() {
 
       <SleepCharts 
         chartData={chartData} 
+        trendData={trendData}
         napDurationData={napDurationData} 
         napStartTimeData={napStartTimeData} 
         sleepProbabilityData={sleepProbabilityData}
