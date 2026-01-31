@@ -62,94 +62,162 @@ export function processSleepStats(sleepEvents: any[]) {
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
 
-  const nightSessions: number[] = [];
-  const bedTimes: number[] = []; 
-  const wakeUpTimes: number[] = [];
   const nightEventIds = new Set<number>(); 
 
-  let chainStartEvent: any = null;
-  let chainEndEvent: any = null;
-  let isChainActive = false;
-  let currentChainIds: number[] = []; 
+  // =========================================================
+  // 1. ROBUST NIGHT DETECTION (Anchor & Stitch)
+  // =========================================================
 
-  // --- 1. NIGHT CHAIN ALGORITHM ---
-  for (let k = 0; k < sortedSleeps.length; k++) {
-    const event = sortedSleeps[k];
+  // 📍 PHASE A: IDENTIFY "ANCHORS" 
+  // Any sleep that touches the Core Night is definitely Night Sleep.
+  
+  sortedSleeps.forEach(event => {
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
-    const startH = start.getHours();
     
-    if (!isChainActive) {
-      if (startH >= 18 && startH <= 22) {
-        let isFalseStart = false;
-        const nextEvent = sortedSleeps[k + 1];
-        const currentDuration = (end.getTime() - start.getTime()) / 60000;
+    // Convert times to decimal hours (e.g., 4:30 AM = 4.5)
+    const startDec = start.getHours() + (start.getMinutes() / 60);
+    const endDec = end.getHours() + (end.getMinutes() / 60);
 
-        // Check if it's a false start (Gap > 40min AND Duration < 90min)
-        if (nextEvent) {
-          const gapMins = (new Date(nextEvent.startTime).getTime() - end.getTime()) / 60000;
-          if (gapMins > 40 && currentDuration < 90) isFalseStart = true;
-        }
+    let isAnchor = false;
 
-        if (!isFalseStart) {
-          isChainActive = true;
-          chainStartEvent = event;
-          chainEndEvent = event;
-          currentChainIds = [event.id]; 
+    // ⚙️ CONFIG: CORE NIGHT HOURS (22:00 to 04:30)
+    // We check if the sleep overlaps with this strict window.
+    
+    // Check 1: Does it START during Core Night?
+    // Logic: Time is greater than 22.0 (10PM) OR less than 4.5 (4:30AM)
+    if (startDec >= 22.0 || startDec < 4.5) {
+      isAnchor = true;
+    }
+
+    // Check 2: Does it END during Core Night?
+    // Logic: Time is greater than 22.0 OR less than 4.5
+    // Note: We use > 22 to avoid counting a nap ending at 21:59
+    if (endDec > 22.0 || endDec < 4.5) {
+      isAnchor = true;
+    }
+
+    // Check 3: Is it a Long Evening Sleep?
+    // Logic: Starts after 18:00 and lasts > 3 hours.
+    // This catches nights where baby sleeps 19:00 - 23:00 (which touches core).
+    const duration = getDurationMinutes(event.startTime, event.endTime);
+    if (startDec >= 18.0 && duration > 180) {
+      isAnchor = true;
+    }
+
+    if (isAnchor) {
+      nightEventIds.add(event.id);
+    }
+  });
+
+  // 📍 PHASE B: STITCH NEIGHBORS
+  // Look at sleeps next to the Anchors and see if they belong to the night.
+  // We run this twice to ensure chains propagate.
+  
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < sortedSleeps.length; i++) {
+      const current = sortedSleeps[i];
+      
+      // Only stitch if we are currently looking at a confirmed Night Event
+      if (!nightEventIds.has(current.id)) continue;
+
+      const currStart = new Date(current.startTime).getTime();
+      const currEnd = new Date(current.endTime).getTime();
+
+      // --- STITCH BACKWARDS (Bedtime connections) ---
+      if (i > 0) {
+        const prev = sortedSleeps[i - 1];
+        if (!nightEventIds.has(prev.id)) {
+          const prevEnd = new Date(prev.endTime).getTime();
+          const gapMins = (currStart - prevEnd) / 60000;
+          const prevStartH = new Date(prev.startTime).getHours();
+
+          // Rule: Gap < 90 mins AND Prev started in the evening (after 17:00 or very early morning)
+          if (gapMins < 90 && (prevStartH >= 17 || prevStartH < 4)) {
+            nightEventIds.add(prev.id);
+          }
         }
       }
-    } else {
-      const lastEnd = new Date(chainEndEvent.endTime).getTime();
-      const currentStart = start.getTime();
-      const gapMins = (currentStart - lastEnd) / 60000;
 
-      const isCurrentAfter430 = (startH > 4) || (startH === 4 && start.getMinutes() >= 30);
-      const prevEndObj = new Date(lastEnd);
-      const prevEndH = prevEndObj.getHours();
-      const isPrevAfter430 = (prevEndH > 4) || (prevEndH === 4 && prevEndObj.getMinutes() >= 30);
-      
-      // Break Chain if: Gap > 40 AND Both events are in the "morning"
-      if (gapMins > 40 && isCurrentAfter430 && isPrevAfter430) {
-        if (chainStartEvent && chainEndEvent) {
-          const nightStart = new Date(chainStartEvent.startTime);
-          const nightEnd = new Date(chainEndEvent.endTime);
-          
-          nightSessions.push((nightEnd.getTime() - nightStart.getTime()) / 60000);
-          
-          let bedTimeDec = nightStart.getHours() + (nightStart.getMinutes() / 60);
-          if (bedTimeDec < 12) bedTimeDec += 24; 
-          bedTimes.push(bedTimeDec);
+      // --- STITCH FORWARDS (Wakeup connections) ---
+      if (i < sortedSleeps.length - 1) {
+        const next = sortedSleeps[i + 1];
+        if (!nightEventIds.has(next.id)) {
+          const nextStart = new Date(next.startTime).getTime();
+          const gapMins = (nextStart - currEnd) / 60000;
+          const nextStartH = new Date(next.startTime).getHours();
 
-          const wakeTimeDec = nightEnd.getHours() + (nightEnd.getMinutes() / 60);
-          wakeUpTimes.push(wakeTimeDec);
+          // ⚙️ CONFIG: FORWARD GAP (Requested: 70 mins)
+          // We only check sleeps that happened within 70 mins of waking up.
+          if (gapMins < 70) { 
 
-          currentChainIds.forEach(id => nightEventIds.add(id));
+            // Strict Morning Rules to avoid counting 06:55 naps as night sleep:
+            
+            // Rule A: It starts REALLY early (before 06:00 AM)
+            // Logic: If baby wakes at 05:00 and sleeps at 05:30, it is still night.
+            const isEarlyMorning = nextStartH < 6;
+
+            // Rule B: It's a "False Wake Up" (Gap < 20 mins)
+            // Logic: If baby wakes at 06:30 but falls back asleep at 06:40, count it.
+            // But NOT if it starts after 07:00 (that is the day).
+            const isFalseWakeup = gapMins < 20 && nextStartH < 7;
+
+            // Apply Rules:
+            if (isEarlyMorning || isFalseWakeup) {
+              nightEventIds.add(next.id);
+            }
+          }
         }
-        isChainActive = false;
-        chainStartEvent = null;
-        chainEndEvent = null;
-        currentChainIds = [];
-      } else {
-        chainEndEvent = event;
-        currentChainIds.push(event.id);
       }
     }
   }
 
-  // Handle final chain
-  if (isChainActive && chainStartEvent && chainEndEvent) {
-    const nightStart = new Date(chainStartEvent.startTime);
-    const nightEnd = new Date(chainEndEvent.endTime);
-    nightSessions.push((nightEnd.getTime() - nightStart.getTime()) / 60000);
-    let bedTimeDec = nightStart.getHours() + (nightStart.getMinutes() / 60);
+  // =========================================================
+  // 2. CALCULATE STATISTICS (Bedtime / Wake Up)
+  // =========================================================
+  
+  // Group Night Events by "Night Date" to find start/end of the night
+  const nightGroups: { [key: string]: { start: Date, end: Date, duration: number } } = {};
+
+  sortedSleeps.forEach(event => {
+    if (nightEventIds.has(event.id)) {
+      const key = getDateKey(event.startTime);
+      const s = new Date(event.startTime);
+      const e = new Date(event.endTime);
+      const dur = getDurationMinutes(event.startTime, event.endTime);
+
+      if (!nightGroups[key]) {
+        nightGroups[key] = { start: s, end: e, duration: dur };
+      } else {
+        // Update Min Start
+        if (s < nightGroups[key].start) nightGroups[key].start = s;
+        // Update Max End
+        if (e > nightGroups[key].end) nightGroups[key].end = e;
+        // Add duration
+        nightGroups[key].duration += dur;
+      }
+    }
+  });
+
+  const nightSessions: number[] = [];
+  const bedTimes: number[] = []; 
+  const wakeUpTimes: number[] = [];
+
+  Object.values(nightGroups).forEach(group => {
+    // Duration
+    nightSessions.push(group.duration); 
+
+    // Bedtime
+    let bedTimeDec = group.start.getHours() + (group.start.getMinutes() / 60);
     if (bedTimeDec < 12) bedTimeDec += 24; 
     bedTimes.push(bedTimeDec);
-    const wakeTimeDec = nightEnd.getHours() + (nightEnd.getMinutes() / 60);
-    wakeUpTimes.push(wakeTimeDec);
-    currentChainIds.forEach(id => nightEventIds.add(id));
-  }
 
-  // --- 2. CALCULATE AVERAGES ---
+    // Wake Up Time
+    const wakeTimeDec = group.end.getHours() + (group.end.getMinutes() / 60);
+    wakeUpTimes.push(wakeTimeDec);
+  });
+
+  // Calculate Averages
   const medianNight = getMedian(nightSessions);
   const medianNightHours = Math.floor(medianNight / 60);
   const medianNightMins = Math.round(medianNight % 60);
@@ -159,24 +227,24 @@ export function processSleepStats(sleepEvents: any[]) {
   const medianBedTime = decimalToTime(getMedian(recentBedTimes));
   const medianWakeTime = decimalToTime(getMedian(recentWakeUpTimes));
 
-  // Nap Stats
+  // =========================================================
+  // 3. NAP STATS
+  // =========================================================
+  
   const naps = completedSleeps.filter((e: any) => !nightEventIds.has(e.id));
   const napDurations = naps.map((e: any) => getDurationMinutes(e.startTime, e.endTime));
   const medianNap = getMedian(napDurations);
   const medianNapHours = Math.floor(medianNap / 60);
   const medianNapMins = Math.round(medianNap % 60);
 
-  // Nap Count
   const napsByDayCount: { [key: string]: number } = {};
   naps.forEach((nap: any) => {
-    // We use the same date key logic for the "Count" stat as we do for the chart
     const d = new Date(nap.startTime);
     if (d.getHours() < 4) d.setDate(d.getDate() - 1);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const key = `${year}-${month}-${day}`;
-    
     napsByDayCount[key] = (napsByDayCount[key] || 0) + 1;
   });
   const dailyNapCounts = Object.values(napsByDayCount);
@@ -184,25 +252,23 @@ export function processSleepStats(sleepEvents: any[]) {
     ? (dailyNapCounts.reduce((a, b) => a + b, 0) / dailyNapCounts.length).toFixed(1)
     : "0.0";
 
-  // --- 3. PREPARE DATA FOR CHARTS ---
+  // =========================================================
+  // 4. CHART DATA
+  // =========================================================
+  
   const sleepByDay: { [key: string]: { night: number; nap: number } } = {};
   
   completedSleeps.forEach((event: any) => {
     const duration = getDurationMinutes(event.startTime, event.endTime);
     const isNight = nightEventIds.has(event.id);
-    
     let dateKey: string;
 
     if (isNight) {
-      // Night Sleep: Keep standard 7am logic.
       dateKey = getDateKey(event.startTime);
     } else {
-      // Nap Logic: Use 4am cutoff.
-      // This allows naps between 04:00 and 07:00 to be counted for the current day
+      // Nap Logic: 4am cutoff
       const d = new Date(event.startTime);
-      if (d.getHours() < 4) {
-        d.setDate(d.getDate() - 1);
-      }
+      if (d.getHours() < 4) d.setDate(d.getDate() - 1);
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
@@ -210,7 +276,6 @@ export function processSleepStats(sleepEvents: any[]) {
     }
 
     if (!sleepByDay[dateKey]) sleepByDay[dateKey] = { night: 0, nap: 0 };
-    
     if (isNight) sleepByDay[dateKey].night += duration;
     else sleepByDay[dateKey].nap += duration;
   });
@@ -229,18 +294,21 @@ export function processSleepStats(sleepEvents: any[]) {
   const medianDailyHours = Math.floor(medianDailySleep / 60);
   const medianDailyMins = Math.round(medianDailySleep % 60);
 
-  // NEW: Trend Data (Last 30 Days)
+  // 1. Get the Key for "Today" based on your 7am rule
+  const todayKey = getDateKey(new Date().toISOString());
+
+  // Trend Data (Last 30 Days)
   const trendData = Object.entries(sleepByDay)
+    .filter(([key]) => key !== todayKey)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, data]) => ({
-      // Format: "15 Jun"
       date: new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
       night: Math.round((data.night / 60) * 10) / 10,
       nap: Math.round((data.nap / 60) * 10) / 10,
       total: Math.round(((data.night + data.nap) / 60) * 10) / 10
     }));
 
-  // Nap Histogram
+  // Histograms
   const durationBuckets: { [key: string]: number } = {};
   const maxBuckets = 6;
   for(let i=0; i<maxBuckets; i++) durationBuckets[`${i*30}-${(i+1)*30-1}m`] = 0;
@@ -253,7 +321,6 @@ export function processSleepStats(sleepEvents: any[]) {
   });
   const napDurationData = Object.entries(durationBuckets).map(([label, value]) => ({ label, value }));
 
-  // Nap Start Times
   const startTimeBuckets: { [key: string]: number } = {};
   for(let h=6; h<18; h++) {
     startTimeBuckets[`${h}:00`] = 0;
@@ -344,9 +411,20 @@ export function generateTimelineData(sleepEvents: any[], nightEventIds: Set<numb
 
 export function calculateSleepProbability(completedSleeps: any[]) {
   const timeSlots = new Array(144).fill(0);
-  const uniqueDays = new Set(completedSleeps.map((e: any) => getDateKey(e.startTime))).size || 1;
+  
+  // 1. Get Today's Key
+  const todayKey = getDateKey(new Date().toISOString());
 
-  completedSleeps.forEach((event: any) => {
+  // 2. Filter out any sleep that belongs to the current unfinished day
+  const historicalSleeps = completedSleeps.filter((e: any) => 
+    getDateKey(e.startTime) !== todayKey
+  );
+
+  // 3. Calculate unique days based on HISTORICAL data only
+  const uniqueDays = new Set(historicalSleeps.map((e: any) => getDateKey(e.startTime))).size || 1;
+
+  // 4. Iterate over HISTORICAL sleeps
+  historicalSleeps.forEach((event: any) => {
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
     let startMins = (start.getHours() * 60 + start.getMinutes()) - 420;

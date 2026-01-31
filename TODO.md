@@ -5,6 +5,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 ## 📱 General issues
 
 - [x] An entry should be editable from the activity log on the individual pages
+- [ ] Add visible notice that vitamins have not been given (e.g. in the nav bar)
 
 ## 🏠 Home
 
@@ -12,6 +13,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Change meds into vitamins on button and log card
 - [x] Fix colors for feeding options, so that they match the feeding page
 - [x] Fix background colors on the log cards, so they match the buttons
+- [ ] Add possibility to see which days medicine were given
 
 ## 💤 Sleep
 
@@ -24,18 +26,26 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Fix sleep that goes accros days
 - [x] Add chart on development on nap, nighttime and total sleep
 - [x] Add total sleep to tooltip
+- [ ] Add possibility to add entry directly on the side
+- [ ] Add possibility to see all entries in the sleep schedule
+- [x] Sleep probability should not count the current day
+- [x] Sleep patern chart should not count the current day
+- [x] Fix nighttime sleep logic bug
 
 ## 👩‍🍼 Feed
 
 - [x] Make feed breakdown into average pr. day
 - [x] Change breastfeeding into breast
 - [x] Change colors, so that solid food and bottle are further away from eachother
+- [ ] Add possibility to add entry directly on the side
+- [ ] Add possibility to see all entries in the feed schedule
 
 ## 💩 Diaper
 
 - [x] Possibility of adding a note to a data entry
 - [x] Fix x-axis on chart
 - [x] Add note to chart
+- [ ] Add possibility to add entry directly on the side
 
 ## ⚖️ Weight
 
@@ -45,6 +55,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Enter weight in gram
 - [x] Add percentile to tooltip
 - [x] Change change over time to cover several measurements
+- [ ] Add possibility to add entry directly on the side
 
 ## 📊 Other aspects
 
