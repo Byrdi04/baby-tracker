@@ -355,22 +355,41 @@ export function processSleepStats(sleepEvents: any[]) {
   };
 }
 
-export function generateTimelineData(sleepEvents: any[], nightEventIds: Set<number>) {
+// UPDATED: Accepts referenceDate and daysToGenerate
+export function generateTimelineData(
+  sleepEvents: any[], 
+  nightEventIds: Set<number>,
+  referenceDate: Date = new Date(), // Default to Today
+  daysToGenerate: number = 7        // Default to 7 days
+) {
   const timelineData = [];
-  const today = new Date();
-  if (today.getHours() < 7) today.setDate(today.getDate() - 1);
   
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
+  // Clone date to avoid mutating the original
+  const current = new Date(referenceDate);
+  
+  // Adjust for 7am cycle if it's "Today"
+  // (If specific historical date is passed, we assume it is set correctly to noon or similar)
+  if (new Date().toDateString() === current.toDateString() && current.getHours() < 7) {
+    current.setDate(current.getDate() - 1);
+  }
+  
+  // Loop backwards from the reference date
+  for (let i = 0; i < daysToGenerate; i++) {
+    const d = new Date(current);
     d.setDate(d.getDate() - i);
+    
+    // Window: 07:00 D to 07:00 D+1
     const rowStart = new Date(d);
     rowStart.setHours(7, 0, 0, 0);
+    
     const rowEnd = new Date(rowStart);
     rowEnd.setDate(rowEnd.getDate() + 1); 
+    
     const rowStartMs = rowStart.getTime();
     const rowEndMs = rowEnd.getTime();
     const dayDurationMs = 24 * 60 * 60 * 1000;
 
+    // Use sorted copy
     const allSleepsSorted = [...sleepEvents].sort((a: any, b: any) => 
         new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
@@ -402,6 +421,7 @@ export function generateTimelineData(sleepEvents: any[], nightEventIds: Set<numb
     });
 
     timelineData.push({
+      // ✅ New line (Removes month):
       date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
       blocks
     });

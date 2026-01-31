@@ -37,7 +37,7 @@ export default function FeedPage() {
       <FeedStats stats={stats} />
 
       {/* Timeline */}
-      <FeedTimeline data={timelineData} />
+      <FeedTimeline data={timelineData} showHistoryLink={true} />
 
       {/* Charts */}
       <FeedCharts chartData={chartData} />

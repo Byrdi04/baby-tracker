@@ -27,7 +27,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Add chart on development on nap, nighttime and total sleep
 - [x] Add total sleep to tooltip
 - [ ] Add possibility to add entry directly on the side
-- [ ] Add possibility to see all entries in the sleep schedule
+- [x] Add possibility to see all entries in the sleep schedule
 - [x] Sleep probability should not count the current day
 - [x] Sleep patern chart should not count the current day
 - [x] Fix nighttime sleep logic bug
@@ -38,7 +38,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Change breastfeeding into breast
 - [x] Change colors, so that solid food and bottle are further away from eachother
 - [ ] Add possibility to add entry directly on the side
-- [ ] Add possibility to see all entries in the feed schedule
+- [x] Add possibility to see all entries in the feed schedule
 
 ## 💩 Diaper
 

@@ -85,18 +85,22 @@ export function processFeedStats(feedEvents: any[]) {
   };
 }
 
-export function generateFeedTimeline(feedEvents: any[]) {
+export function generateFeedTimeline(
+  feedEvents: any[], 
+  referenceDate: Date = new Date(),
+  daysToGenerate: number = 7
+) {
   const timelineData = [];
-  const today = new Date();
+  const current = new Date(referenceDate);
   
-  // Adjust for 7am cycle
-  if (today.getHours() < 7) today.setDate(today.getDate() - 1);
+  if (new Date().toDateString() === current.toDateString() && current.getHours() < 7) {
+    current.setDate(current.getDate() - 1);
+  }
 
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
+  for (let i = 0; i < daysToGenerate; i++) {
+    const d = new Date(current);
     d.setDate(d.getDate() - i);
     
-    // Define window: 7am Day X to 7am Day X+1
     const cycleStart = new Date(d); 
     cycleStart.setHours(7, 0, 0, 0);
     
@@ -126,6 +130,7 @@ export function generateFeedTimeline(feedEvents: any[]) {
       });
 
     timelineData.push({
+      // ✅ New line:
       date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
       points: dayPoints
     });

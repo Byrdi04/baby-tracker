@@ -47,7 +47,8 @@ export default function SleepPage() {
       {/* New Stats Component */}
       <SleepStats stats={stats} />
 
-      <SleepTimeline data={timelineData} />
+      {/* Timeline Section */}
+      <SleepTimeline data={timelineData} showHistoryLink={true} />
 
       <SleepCharts 
         chartData={chartData} 
