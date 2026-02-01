@@ -1,6 +1,7 @@
 import HistoryList from '@/components/HistoryList';
 import Link from 'next/link';
 import { fetchHistoryChunk } from '@/app/actions'; // 👈 Import the action
+export const dynamic = "force-dynamic";
 
 export default async function SleepHistoryPage() {
   // 👈 Fetch Page 0 on the server
