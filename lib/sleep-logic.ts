@@ -423,6 +423,7 @@ export function generateTimelineData(
     timelineData.push({
       // ✅ New line (Removes month):
       date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
+      rawDate: d.toISOString(),
       blocks
     });
   }

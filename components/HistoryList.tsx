@@ -1,36 +1,67 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { fetchHistoryChunk } from '@/app/actions';
 import SleepTimeline from '@/components/SleepTimeline';
 import FeedTimeline from '@/components/FeedTimeline';
 
+import { processSleepStats, generateTimelineData } from '@/lib/sleep-logic';
+import { generateFeedTimeline } from '@/lib/feed-logic';
+
+// 1. Define the shapes of your data based on your logic files
+// This fixes the "DayRow" error by strictly defining what the components expect.
+type SleepRow = {
+  date: string;
+  rawDate: string;
+  blocks: {
+    left: number;
+    width: number;
+    isNight: boolean;
+    isOngoing: boolean;
+    info: { time: string; duration: string };
+  }[];
+};
+
+type FeedRow = {
+  date: string;
+  rawDate: string;
+  points: any[]; // You can be more specific here if you know the feed structure
+};
+
 type Props = {
   type: 'SLEEP' | 'FEED';
-  initialData: any[];
+  initialData: any; 
 };
 
 export default function HistoryList({ type, initialData }: Props) {
-  // 1. Initialize with the data passed from the Server
-  const [data, setData] = useState<any[]>(initialData);
-  
-  // 2. Start at Page 1 (Because Page 0 is already in initialData)
+  const [chunks, setChunks] = useState<any[]>([initialData]);
   const [page, setPage] = useState(1);
-  
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(initialData.length > 0);
+  const [hasMore, setHasMore] = useState(initialData.events.length > 0);
+
+  const processedData = useMemo(() => {
+    const allEvents = chunks.flatMap(c => c.events);
+
+    const DAYS_PER_CHUNK = 14;
+    const totalDays = chunks.length * DAYS_PER_CHUNK;
+
+    if (type === 'SLEEP') {
+      const { nightEventIds } = processSleepStats(allEvents);
+      return generateTimelineData(allEvents, nightEventIds, new Date(), totalDays);
+    } else {
+      return generateFeedTimeline(allEvents, new Date(), totalDays);
+    }
+  }, [chunks, type]);
 
   const loadMore = async () => {
     setLoading(true);
     try {
-      // Fetch the next chunk (Page 1, then Page 2...)
-      const newRows = await fetchHistoryChunk(type, page);
+      const newChunk = await fetchHistoryChunk(type, page);
       
-      if (newRows.length === 0) {
+      if (newChunk.events.length === 0) {
         setHasMore(false);
       } else {
-        // Append new rows to existing list
-        setData(prev => [...prev, ...newRows]);
+        setChunks(prev => [...prev, newChunk]);
         setPage(prev => prev + 1);
       }
     } catch (error) {
@@ -40,16 +71,14 @@ export default function HistoryList({ type, initialData }: Props) {
     }
   };
 
-  // ❌ NO useEffect here. 
-  // We do NOT want to fetch automatically on mount, 
-  // because the server already did it for us.
-
   return (
     <div className="space-y-4">
       {type === 'SLEEP' ? (
-        <SleepTimeline data={data} />
+        // 2. Use 'as SleepRow[]' to tell TypeScript: "Trust me, this is sleep data"
+        <SleepTimeline data={processedData as SleepRow[]} />
       ) : (
-        <FeedTimeline data={data} />
+        // 3. Use 'as FeedRow[]' for the feed section
+        <FeedTimeline data={processedData as FeedRow[]} />
       )}
 
       <div className="py-4 text-center">
@@ -58,7 +87,7 @@ export default function HistoryList({ type, initialData }: Props) {
         {!loading && hasMore && (
           <button 
             onClick={loadMore}
-            className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
           >
             Load previous 14 days
           </button>

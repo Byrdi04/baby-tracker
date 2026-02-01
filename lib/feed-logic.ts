@@ -132,6 +132,7 @@ export function generateFeedTimeline(
     timelineData.push({
       // ✅ New line:
       date: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
+      rawDate: d.toISOString(),
       points: dayPoints
     });
   }

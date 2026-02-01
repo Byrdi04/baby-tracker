@@ -12,7 +12,7 @@ export default async function SleepHistoryPage() {
         <h1 className="text-2xl font-bold dark:text-gray-300">🕙 Sleep History</h1>
         <Link 
           href="/sleep" 
-          className="text-sm text-blue-500 hover:underline"
+          className="text-sm text-gray-600 dark:text-gray-200 hover:underline"
         >
           Back to Dashboard
         </Link>

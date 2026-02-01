@@ -12,7 +12,7 @@ export default async function FeedHistoryPage() {
         <h1 className="text-2xl font-bold dark:text-gray-300">🕙 Feed History</h1>
         <Link 
           href="/feed" 
-          className="text-sm text-blue-500 hover:underline"
+          className="text-sm text-gray-600 dark:text-gray-200 hover:underline"
         >
           Back to Dashboard
         </Link>

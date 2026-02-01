@@ -16,13 +16,19 @@ type SleepBlock = {
 
 type DayRow = {
   date: string;
+  rawDate?: string; // 👈 1. Added rawDate to access the full date object
   blocks: SleepBlock[];
 };
 
-// 1. Update Props Type
 type Props = {
   data: DayRow[];
-  showHistoryLink?: boolean; // 👈 New optional prop
+  showHistoryLink?: boolean;
+};
+
+// 2. Helper to get "August 2024" from ISO string
+const getMonthHeader = (dateStr?: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 };
 
 export default function SleepTimeline({ data, showHistoryLink = false }: Props) {
@@ -81,13 +87,11 @@ export default function SleepTimeline({ data, showHistoryLink = false }: Props) 
   return (
     <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl mb-4">
       
-      {/* 2. New Flex Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
           Sleep Schedule <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(7am - 7am)</span>
         </h3>
         
-        {/* 3. History Button (Only if prop is true) */}
         {showHistoryLink && (
           <Link 
             href="/sleep/history" 
@@ -101,58 +105,88 @@ export default function SleepTimeline({ data, showHistoryLink = false }: Props) 
       <div className="relative">
         <div className="space-y-5 mt-2">
           {data.map((day, dIndex) => {
-            // Check if this row matches today's label to show the "Now" line
             const isToday = day.date === todayLabel;
 
+            // 3. Logic for Month Headers
+            // We assume that if `showHistoryLink` is FALSE, we are in the History View.
+            // We also check if rawDate exists (it might not in dashboard data).
+            const isHistoryView = !showHistoryLink;
+            let showHeader = false;
+            let headerLabel = '';
+
+            if (isHistoryView && day.rawDate) {
+              const currentMonth = getMonthHeader(day.rawDate);
+              const prevMonth = dIndex > 0 ? getMonthHeader(data[dIndex - 1].rawDate) : null;
+              
+              // Show header if it's the very first item OR the month changed
+              if (dIndex === 0 || currentMonth !== prevMonth) {
+                showHeader = true;
+                headerLabel = currentMonth;
+              }
+            }
+
             return (
-              <div key={dIndex} className="flex items-center gap-3">
-                <div className="w-12 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">
-                  {day.date}
-                </div>
+              <div key={dIndex} className="flex flex-col">
+                
+                {/* 4. Render the Month Header */}
+                {showHeader && (
+                  <div className="pt-6 pb-2 mb-2">
+                     <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        {headerLabel}
+                     </h4>
+                  </div>
+                )}
 
-                <div className="flex-1 h-4 bg-slate-300 dark:bg-gray-700 rounded-full relative">
-                  
-                  {gridMarkers.map((left) => (
-                     <div key={left} className="absolute top-0 bottom-0 border-l border-dashed border-gray-200 dark:border-gray-600" style={{ left }} />
-                  ))}
+                {/* Existing Timeline Row */}
+                <div className="flex items-center gap-3">
+                  <div className="w-12 text-xs font-medium text-gray-500 dark:text-gray-400 text-right">
+                    {day.date}
+                  </div>
 
-                  {isToday && currentPos !== null && (
-                    <div 
-                      className="absolute -top-0 -bottom-0 w-[2px] bg-slate-600 z-0 pointer-events-none shadow-sm flex flex-col items-center"
-                      style={{ left: `${currentPos}%` }}
-                    >
-                      <span className="absolute top-full mt-1 text-[9px] font-bold text-slate-600 tracking-widest leading-none">
-                        Now
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex-1 h-4 bg-slate-300 dark:bg-gray-700 rounded-full relative">
+                    
+                    {gridMarkers.map((left) => (
+                       <div key={left} className="absolute top-0 bottom-0 border-l border-dashed border-gray-200 dark:border-gray-600" style={{ left }} />
+                    ))}
 
-                  {day.blocks.map((block, bIndex) => {
-                    const isActive = activeBlock?.dIndex === dIndex && activeBlock?.bIndex === bIndex;
-
-                    return (
-                      <div
-                        key={bIndex}
-                        onClick={(e) => handleBlockClick(e, dIndex, bIndex)}
-                        className={`absolute h-full rounded-sm cursor-pointer transition-all border-2 ${getBlockColor(block, isActive)}`}
-                        style={{
-                          left: `${block.left}%`,
-                          width: `${block.width}%`,
-                        }}
+                    {isToday && currentPos !== null && (
+                      <div 
+                        className="absolute -top-0 -bottom-0 w-[2px] bg-slate-600 z-0 pointer-events-none shadow-sm flex flex-col items-center"
+                        style={{ left: `${currentPos}%` }}
                       >
-                        {isActive && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-800 text-white text-xs py-1 px-2 rounded-lg whitespace-nowrap shadow-xl z-30 pointer-events-none">
-                            <p className="font-bold flex items-center gap-1">
-                              {block.isOngoing && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"/>}
-                              {block.info.duration}
-                            </p>
-                            <p className="text-[10px] opacity-80">{block.info.time}</p>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                          </div>
-                        )}
+                        <span className="absolute top-full mt-1 text-[9px] font-bold text-slate-600 tracking-widest leading-none">
+                          Now
+                        </span>
                       </div>
-                    );
-                  })}
+                    )}
+
+                    {day.blocks.map((block, bIndex) => {
+                      const isActive = activeBlock?.dIndex === dIndex && activeBlock?.bIndex === bIndex;
+
+                      return (
+                        <div
+                          key={bIndex}
+                          onClick={(e) => handleBlockClick(e, dIndex, bIndex)}
+                          className={`absolute h-full rounded-sm cursor-pointer transition-all border-2 ${getBlockColor(block, isActive)}`}
+                          style={{
+                            left: `${block.left}%`,
+                            width: `${block.width}%`,
+                          }}
+                        >
+                          {isActive && (
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-800 text-white text-xs py-1 px-2 rounded-lg whitespace-nowrap shadow-xl z-30 pointer-events-none">
+                              <p className="font-bold flex items-center gap-1">
+                                {block.isOngoing && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"/>}
+                                {block.info.duration}
+                              </p>
+                              <p className="text-[10px] opacity-80">{block.info.time}</p>
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );

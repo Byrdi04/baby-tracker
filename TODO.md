@@ -5,7 +5,9 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 ## 📱 General issues
 
 - [x] An entry should be editable from the activity log on the individual pages
-- [ ] Add visible notice that vitamins have not been given (e.g. in the nav bar)
+- [ ] Add visible notification that vitamins have not been given (e.g. in the nav bar)
+- [x] Fix history timeline, the first 14 days
+- [x] Add month to history timelines
 
 ## 🏠 Home
 
@@ -31,6 +33,8 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Sleep probability should not count the current day
 - [x] Sleep patern chart should not count the current day
 - [x] Fix nighttime sleep logic bug
+- [ ] Make figure of number of wake-up times during the night over time
+- [ ] (Add new card row: Avg number of wake-up times and longest wake-up time during night)
 
 ## 👩‍🍼 Feed
 
