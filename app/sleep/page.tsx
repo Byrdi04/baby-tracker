@@ -30,7 +30,8 @@ export default function SleepPage() {
     chartData, 
     trendData,
     napDurationData, 
-    napStartTimeData 
+    napStartTimeData,
+    wakeupsData
   } = processSleepStats(sleepEvents);
 
   const timelineData = generateTimelineData(sleepEvents, nightEventIds);
@@ -56,6 +57,9 @@ export default function SleepPage() {
         napDurationData={napDurationData} 
         napStartTimeData={napStartTimeData} 
         sleepProbabilityData={sleepProbabilityData}
+        wakeupsData={wakeupsData}
+        medianWakeupsLast14={stats.medianWakeupsLast14}
+        longestStretchMinutesLast14={stats.longestStretchMinutesLast14}
       />
 
       <section>

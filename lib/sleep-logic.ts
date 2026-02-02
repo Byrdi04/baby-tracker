@@ -52,6 +52,97 @@ export const getDateKey = (dateStr: string): string => {
   return `${year}-${month}-${day}`;
 };
 
+export function calculateNightWakeups(
+  nightEventIds: Set<number>,
+  completedSleeps: any[]
+) {
+  // 1. Filter only night sleep events
+  const nightSleeps = completedSleeps.filter((e: any) =>
+    nightEventIds.has(e.id)
+  );
+
+  if (nightSleeps.length === 0) {
+    return {
+      wakeupsData: [] as { date: number; wakeups: number }[],
+      medianWakeupsLast14: 0,
+      longestStretchMinutesLast14: 0,
+    };
+  }
+
+  // 2. Group segments by "night date" (7am cutoff via getDateKey)
+  const segmentsByNight: Record<string, { start: Date; end: Date }[]> = {};
+
+  for (const e of nightSleeps) {
+    const key = getDateKey(e.startTime); // e.g. '2024-06-01'
+    if (!segmentsByNight[key]) {
+      segmentsByNight[key] = [];
+    }
+    segmentsByNight[key].push({
+      start: new Date(e.startTime),
+      end: new Date(e.endTime),
+    });
+  }
+
+  // 3. For each night, sort segments, count wake-ups and longest stretch
+  type NightInfo = {
+    dateStr: string;
+    timestamp: number;
+    wakeups: number;
+    longestStretchMinutes: number;
+  };
+
+  const perNight: NightInfo[] = Object.entries(segmentsByNight).map(
+    ([dateStr, segments]) => {
+      segments.sort(
+        (a, b) => a.start.getTime() - b.start.getTime()
+      );
+
+      // Wake-ups = extra segments beyond the first
+      const wakeups = Math.max(0, segments.length - 1);
+
+      // Longest continuous night sleep stretch (in minutes)
+      let longestStretchMs = 0;
+      for (const seg of segments) {
+        const durMs = seg.end.getTime() - seg.start.getTime();
+        if (durMs > longestStretchMs) longestStretchMs = durMs;
+      }
+      const longestStretchMinutes = Math.round(longestStretchMs / 60000);
+
+      return {
+        dateStr,
+        timestamp: new Date(dateStr).getTime(), // for chart X axis
+        wakeups,
+        longestStretchMinutes,
+      };
+    }
+  );
+
+  // Sort by date
+  perNight.sort((a, b) => a.timestamp - b.timestamp);
+
+  // 4. Build chart data
+  const wakeupsData = perNight.map((n) => ({
+    date: n.timestamp,
+    wakeups: n.wakeups,
+  }));
+
+  // 5. Stats for last 14 nights
+  const last14 = perNight.slice(-14); // if fewer than 14, it just uses what's available
+
+  const medianWakeupsLast14 = getMedian(last14.map((n) => n.wakeups));
+
+  const longestStretchMinutesLast14 = last14.reduce(
+    (max, n) => Math.max(max, n.longestStretchMinutes),
+    0
+  );
+
+  return {
+    wakeupsData,
+    medianWakeupsLast14,
+    longestStretchMinutesLast14,
+  };
+}
+
 // ================= MAIN PROCESSING LOGIC =================
 
 export function processSleepStats(sleepEvents: any[]) {
@@ -337,6 +428,12 @@ export function processSleepStats(sleepEvents: any[]) {
   });
   const napStartTimeData = Object.entries(startTimeBuckets).map(([label, value]) => ({ label, value }));
 
+    const {
+      wakeupsData,
+      medianWakeupsLast14,
+      longestStretchMinutesLast14,
+    } = calculateNightWakeups(nightEventIds, completedSleeps);
+
   return {
     nightEventIds,
     completedSleeps,
@@ -346,12 +443,16 @@ export function processSleepStats(sleepEvents: any[]) {
       medianNapHours, medianNapMins,
       avgNapsPerDay,
       medianWakeTime,
-      medianBedTime
+      medianBedTime,
+      // NEW:
+      medianWakeupsLast14,
+      longestStretchMinutesLast14,
     },
     chartData,
     trendData,
     napDurationData,
-    napStartTimeData
+    napStartTimeData,
+    wakeupsData,
   };
 }
 
@@ -483,3 +584,4 @@ export function calculateSleepProbability(completedSleeps: any[]) {
     return { time: point.time, percent: sum / 5 };
   });
 }
+

@@ -5,6 +5,8 @@ import {
   ResponsiveContainer, CartesianGrid 
 } from 'recharts';
 import ChartCard from '@/components/ui/ChartCard'; 
+import { useEffect } from 'react';
+import StatCard from '@/components/ui/StatCard';
 
 type ChartDataPoint = {
   label: string;
@@ -29,6 +31,18 @@ type Props = {
   napDurationData: ChartDataPoint[];
   napStartTimeData: ChartDataPoint[];
   sleepProbabilityData: ProbabilityPoint[];
+  wakeupsData: { date: number; wakeups: number }[];
+  medianWakeupsLast14: number;            // NEW
+  longestStretchMinutesLast14: number;
+};
+
+const formatMinutes = (mins: number) => {
+  if (!mins || mins <= 0) return '–';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${m} min`;
 };
 
 // --- Custom Tooltip for Stacked Bar Chart ---
@@ -74,7 +88,31 @@ const CustomTick = (props: any) => {
     );
   };
 
-export default function SleepCharts({ chartData, trendData, napDurationData, napStartTimeData, sleepProbabilityData }: Props) {
+export default function SleepCharts({ 
+  chartData, 
+  trendData, 
+  napDurationData, 
+  napStartTimeData, 
+  sleepProbabilityData, 
+  wakeupsData,
+  medianWakeupsLast14,           // ← add
+  longestStretchMinutesLast14
+}: Props) {
+    useEffect(() => {
+    console.log('Wakeups Data:', wakeupsData);
+  }, [wakeupsData]);
+
+  // Add a string label for the X-axis (equal spacing, category axis)
+  const wakeupsChartData = wakeupsData.map((d) => ({
+    ...d,
+    // e.g. "Mon 3 Feb"
+    label: new Date(d.date).toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    }),
+  }));
+
   return (
     <section className="space-y-6 mb-4">
       
@@ -202,6 +240,70 @@ export default function SleepCharts({ chartData, trendData, napDurationData, nap
           </ResponsiveContainer>
         </div>
       </ChartCard>*/}
+
+      {/* 5. Night Wake-ups Line Chart (All Time) */}
+      <ChartCard>
+        {/* NEW: Stats row above the chart */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <StatCard
+            // Adjust prop names to match your StatCard implementation
+            label="Night wake-ups (14d)"
+            value={medianWakeupsLast14.toFixed(1)}
+            color="emerald"
+          />
+          <StatCard
+            label="Longest sleep (14d)"
+            value={formatMinutes(longestStretchMinutesLast14)}
+            color="green"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between mb-2 gap-y-1">
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mr-2">
+            Night Wake-ups
+          </h3>
+        </div>
+
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={wakeupsChartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+              
+              {wakeupsChartData.length === 0 ? (
+                <text x={20} y={20} fill="#9CA3AF">No wake-up data available</text>
+              ) : (
+                <>
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10 }}
+                    interval="preserveStartEnd"  // show first & last, auto-thin the rest
+                    minTickGap={12}              // pixel gap between ticks before thinning more
+                  />
+                  
+                  <YAxis tick={{ fontSize: 12 }} width={30} />
+                  
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px' }}
+                    itemStyle={{ fontSize: '12px', padding: 0 }}
+                    // label is already a string like "Mon 3 Feb"
+                    labelFormatter={(label) => label as string}
+                    formatter={(value) => [`${value} wake-ups`, 'Wake-ups']}
+                  />
+                  
+                  <Line 
+                    type="monotone" 
+                    dataKey="wakeups"        // still fine, this field exists on wakeupsChartData
+                    stroke="#0d9488" 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                </>
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </ChartCard>
 
     </section>
   );
