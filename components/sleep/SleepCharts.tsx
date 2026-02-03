@@ -40,9 +40,9 @@ const formatMinutes = (mins: number) => {
   if (!mins || mins <= 0) return '–';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h === 0) return `${m} min`;
-  if (m === 0) return `${h} h`;
-  return `${h} h ${m} min`;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 };
 
 // --- Custom Tooltip for Stacked Bar Chart ---
@@ -227,32 +227,18 @@ export default function SleepCharts({
         </div>
       </ChartCard>
 
-      {/* 4. Nap Duration Histogram 
-      <ChartCard title="Nap Duration Distribution">
-        <div className="h-60">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={napDurationData} margin={{ bottom: 40 }}>
-              <XAxis dataKey="label" tick={<CustomTick />} interval={0} height={20} />
-              <YAxis tick={{ fontSize: 12 }} width={30} allowDecimals={false} />
-              <Tooltip formatter={(value) => [`${value} naps`, 'Count']} contentStyle={{ borderRadius: '8px' }} />
-              <Bar dataKey="value" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </ChartCard>*/}
-
       {/* 5. Night Wake-ups Line Chart (All Time) */}
       <ChartCard>
         {/* NEW: Stats row above the chart */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <StatCard
             // Adjust prop names to match your StatCard implementation
-            label="Night wake-ups (14d)"
-            value={medianWakeupsLast14.toFixed(1)}
+            label="Night wake-ups"
+            value={medianWakeupsLast14.toFixed(0)}
             color="emerald"
           />
           <StatCard
-            label="Longest sleep (14d)"
+            label="Longest sleep"
             value={formatMinutes(longestStretchMinutesLast14)}
             color="green"
           />

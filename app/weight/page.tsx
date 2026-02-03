@@ -54,7 +54,7 @@ export default function WeightPage() {
 
   // -- 3. Growth Rate (Windowed - Last 5 Steps) --
   // Used for Card #4
-  let rateLabel = "Growth Rate";
+  let rateLabel = "Growth";
   let rateValue = "—";
   
   // 👇 FIX: Add ': any' here to prevent the TypeScript error
@@ -79,7 +79,7 @@ export default function WeightPage() {
     if (daysDiff > 0) {
       const calculatedRate = Math.round(gainGrams / daysDiff);
       
-      rateLabel = `Growth Rate (${daysDiff} days)`;
+      rateLabel = `Growth (over ${daysDiff}d)`;
       rateValue = `${calculatedRate > 0 ? '+' : ''}${calculatedRate} g/day`;
       
       // Changed colors to standard 'green'/'red' to match your other cards safely
@@ -166,21 +166,21 @@ export default function WeightPage() {
         
         {/* Card 1: Current Weight */}
         <StatCard 
-          label="Current Weight" 
+          label="Current weight" 
           value={latestWeight > 0 ? `${latestWeight} kg` : '—'} 
           color="sky" 
         />
         
         {/* Card 2: Current Percentile */}
         <StatCard 
-          label="Current Percentile" 
+          label="Current percentile" 
           value={currentPercentile} 
           color="blue" 
         />
 
         {/* Card 3: Latest Change (Last entry vs 2nd Last) */}
         <StatCard 
-          label="Latest Change" 
+          label="Latest change" 
           value={
             !hasHistory 
               ? "—" 

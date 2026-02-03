@@ -30,12 +30,12 @@ export default function FeedStats({ stats }: Props) {
       {/* 1. Top Stats Grid */}
       <section className="grid grid-cols-2 gap-4 mb-4">
         <StatCard 
-          label="Avg Feeds pr. Day" 
-          value={`${stats.avgFeedsPerDay}`} 
+          label="Avg feeds pr. day" 
+          value={`${stats.avgFeedsPerDay.toFixed(0)}`} 
           color="purple" 
         />
         <StatCard 
-          label="Avg Time Between Feeds" 
+          label="Avg time between" 
           value={`${stats.avgGapHours}h ${stats.avgGapMins}m`} 
           color="red" 
         />

@@ -16,33 +16,33 @@ export default function SleepStats({ stats }: { stats: Stats }) {
   return (
     <section className="grid grid-cols-2 gap-2 mb-4">
       <StatCard 
-        label="Avg Total Sleep" 
+        label="Avg total sleep" 
         value={`${stats.medianDailyHours}h ${stats.medianDailyMins}m`} 
         color="blue" 
       />
       <StatCard 
-        label="Avg Night Sleep" 
+        label="Avg night sleep" 
         value={stats.medianNightHours > 0 ? `${stats.medianNightHours}h ${stats.medianNightMins}m` : `${stats.medianNightMins}m`}
         color="indigo" 
       />
       <StatCard 
-        label="Avg Nap Length" 
+        label="Avg nap length" 
         value={stats.medianNapHours > 0 ? `${stats.medianNapHours}h ${stats.medianNapMins}m` : `${stats.medianNapMins}m`}
         color="fuchsia" 
       />
       <StatCard 
-        label="Avg Naps pr. Day" 
-        value={stats.avgNapsPerDay}
+        label="Avg naps pr. day" 
+        value={Number(stats.avgNapsPerDay).toFixed(0)}
         color="purple" 
       />
       <StatCard 
-        label="Avg Wake Up Time" 
+        label="Avg wake up time" 
         value={stats.medianWakeTime}
         icon='☀️'
         color="yellow" 
       />
       <StatCard 
-        label="Avg Bedtime" 
+        label="Avg bedtime" 
         value={stats.medianBedTime}
         icon='🛌'
         color="orange" 
