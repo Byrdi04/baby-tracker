@@ -223,8 +223,8 @@ export function processSleepStats(sleepEvents: any[]) {
           const gapMins = (currStart - prevEnd) / 60000;
           const prevStartH = new Date(prev.startTime).getHours();
 
-          // Rule: Gap < 90 mins AND Prev started in the evening (after 17:00 or very early morning)
-          if (gapMins < 90 && (prevStartH >= 17 || prevStartH < 4)) {
+          // Rule: Gap < 60 mins AND Prev started in the evening (after 17:00 or very early morning)
+          if (gapMins < 60 && (prevStartH >= 17 || prevStartH < 4)) {
             nightEventIds.add(prev.id);
           }
         }
