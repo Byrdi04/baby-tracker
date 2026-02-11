@@ -43,6 +43,7 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 - [x] Change colors, so that solid food and bottle are further away from eachother
 - [ ] Add possibility to add entry directly on the side
 - [x] Add possibility to see all entries in the feed schedule
+- [ ] Make note visible in tool-tip on timeline
 
 ## 💩 Diaper
 
@@ -65,3 +66,5 @@ ctrl+shit+V or cmd+shift+v to see with nice layout
 
 - [x] Make notes visible
 - [ ] Add export function
+- [ ] Make scrollable element in history automatic
+- [ ] Make the current day stick to the top in the history
