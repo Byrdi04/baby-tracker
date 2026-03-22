@@ -5,11 +5,12 @@ type Stats = {
   medianDailyMins: number;
   medianNightHours: number;
   medianNightMins: number;
-  medianNapHours: number;
-  medianNapMins: number;
   avgNapsPerDay: string;
   medianWakeTime: string;
   medianBedTime: string;
+  // NEW: Added the wake window stats to the type
+  avgWakeWindowHours: number;
+  avgWakeWindowMins: number; 
 };
 
 export default function SleepStats({ stats }: { stats: Stats }) {
@@ -25,11 +26,14 @@ export default function SleepStats({ stats }: { stats: Stats }) {
         value={stats.medianNightHours > 0 ? `${stats.medianNightHours}h ${stats.medianNightMins}m` : `${stats.medianNightMins}m`}
         color="indigo" 
       />
+      
+      {/* REPLACED: Now shows Awake Time instead of Nap Length */}
       <StatCard 
-        label="Avg nap length" 
-        value={stats.medianNapHours > 0 ? `${stats.medianNapHours}h ${stats.medianNapMins}m` : `${stats.medianNapMins}m`}
+        label="Avg awake time" 
+        value={stats.avgWakeWindowHours > 0 ? `${stats.avgWakeWindowHours}h ${stats.avgWakeWindowMins}m` : `${stats.avgWakeWindowMins}m`}
         color="fuchsia" 
       />
+      
       <StatCard 
         label="Avg naps pr. day" 
         value={Number(stats.avgNapsPerDay).toFixed(0)}

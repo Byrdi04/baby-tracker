@@ -1,4 +1,5 @@
 // lib/feed-logic.ts
+import { DAY_START_HOUR } from './constants';
 
 // ================= HELPER FUNCTIONS =================
 export const formatTime = (dateStr: string) => {
@@ -9,8 +10,16 @@ export const formatTime = (dateStr: string) => {
   });
 };
 
+// UPDATED: Now uses DAY_START_HOUR so early morning feeds count towards the previous logical day
 export const getDateKey = (dateStr: string): string => {
-  return new Date(dateStr).toISOString().split('T')[0];
+  const date = new Date(dateStr);
+  if (date.getHours() < DAY_START_HOUR) {
+    date.setDate(date.getDate() - 1);
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 // ================= MAIN LOGIC =================
@@ -105,10 +114,10 @@ export function generateFeedTimeline(
   const timelineData = [];
   const current = new Date(referenceDate);
 
-  // 7am day-boundary like sleep
+  // UPDATED: Use dynamic DAY_START_HOUR
   if (
     new Date().toDateString() === current.toDateString() &&
-    current.getHours() < 7
+    current.getHours() < DAY_START_HOUR
   ) {
     current.setDate(current.getDate() - 1);
   }
@@ -118,7 +127,7 @@ export function generateFeedTimeline(
     d.setDate(d.getDate() - i);
 
     const cycleStart = new Date(d);
-    cycleStart.setHours(7, 0, 0, 0);
+    cycleStart.setHours(DAY_START_HOUR, 0, 0, 0); // UPDATED
 
     const cycleEnd = new Date(cycleStart);
     cycleEnd.setDate(cycleEnd.getDate() + 1);
@@ -132,13 +141,13 @@ export function generateFeedTimeline(
         const start = new Date(e.startTime);
         const data = JSON.parse(e.data || '{}');
 
+        // UPDATED: Calculate percentage based on dynamic day start
         let hours = start.getHours() + start.getMinutes() / 60;
-        if (hours < 7) hours += 24;
+        if (hours < DAY_START_HOUR) hours += 24;
 
-        const relativeHours = hours - 7;
+        const relativeHours = hours - DAY_START_HOUR;
         const left = (relativeHours / 24) * 100;
 
-        // 👇 NEW: get note from DB row (events.note) and trim it
         const rawNote: string = e.note ?? '';
         const note = rawNote.trim() || undefined;
 
@@ -146,7 +155,7 @@ export function generateFeedTimeline(
           left,
           type: data.feedType || 'Unknown',
           time: formatTime(e.startTime),
-          note, // 👈 pass note through to FeedTimeline
+          note,
         };
       });
 

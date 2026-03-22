@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ChartCard from '@/components/ui/ChartCard'; 
+import { DAY_START_HOUR } from '@/lib/constants'; // <-- 1. Import the constant
 
 type ChartDataPoint = {
   date: string;
@@ -13,9 +14,16 @@ type Props = {
 };
 
 export default function FeedCharts({ chartData }: Props) {
+  
+  // 2. Format the time boundary label dynamically
+  const displayHour = DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR;
+  const amPm = DAY_START_HOUR >= 12 ? 'pm' : 'am';
+  const headerTimeStr = `${displayHour}.00${amPm} - ${displayHour}.00${amPm}`;
+
   return (
     <section className="mb-6">
-      <ChartCard title="Feeds per Day (Last 7 Days)">
+      {/* 3. Inject the dynamic header string into the title */}
+      <ChartCard title={`Feeds per Day (${headerTimeStr})`}>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>

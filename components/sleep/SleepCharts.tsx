@@ -7,6 +7,7 @@ import {
 import ChartCard from '@/components/ui/ChartCard'; 
 import { useEffect } from 'react';
 import StatCard from '@/components/ui/StatCard';
+import { DAY_START_HOUR } from '@/lib/constants'; // <-- 1. Import the constant
 
 type ChartDataPoint = {
   label: string;
@@ -32,7 +33,7 @@ type Props = {
   napStartTimeData: ChartDataPoint[];
   sleepProbabilityData: ProbabilityPoint[];
   wakeupsData: { date: number; wakeups: number }[];
-  medianWakeupsLast14: number;            // NEW
+  medianWakeupsLast14: number;            
   longestStretchMinutesLast14: number;
 };
 
@@ -95,17 +96,20 @@ export default function SleepCharts({
   napStartTimeData, 
   sleepProbabilityData, 
   wakeupsData,
-  medianWakeupsLast14,           // ← add
+  medianWakeupsLast14,           
   longestStretchMinutesLast14
 }: Props) {
     useEffect(() => {
     console.log('Wakeups Data:', wakeupsData);
   }, [wakeupsData]);
 
-  // Add a string label for the X-axis (equal spacing, category axis)
+  // 2. Format the time boundary label dynamically
+  const displayHour = DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR;
+  const amPm = DAY_START_HOUR >= 12 ? 'pm' : 'am';
+  const headerTimeStr = `${displayHour}.00${amPm} - ${displayHour}.00${amPm}`;
+
   const wakeupsChartData = wakeupsData.map((d) => ({
     ...d,
-    // e.g. "Mon 3 Feb"
     label: new Date(d.date).toLocaleDateString('en-GB', {
       weekday: 'short',
       day: 'numeric',
@@ -117,7 +121,7 @@ export default function SleepCharts({
     <section className="space-y-6 mb-4">
       
       {/* 1. Sleep Probability */}
-      <ChartCard title="Sleep Probability (24h Pattern)">
+      <ChartCard title={`Sleep Probability (${headerTimeStr} Pattern)`}>
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={sleepProbabilityData} barCategoryGap={0}>
@@ -134,8 +138,9 @@ export default function SleepCharts({
       {/* 2. Daily Sleep Chart (STACKED) */}
       <ChartCard>
         <div className="flex items-center justify-between mb-2">
+          {/* 3. Added the dynamic header string to the title */}
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-            Sleep per Day <span className="text-sm font-normal text-gray-500">(Last 7 Days)</span>
+            Sleep per Day <span className="text-sm font-normal text-gray-500">({headerTimeStr})</span>
           </h3>
           
           <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
@@ -167,43 +172,26 @@ export default function SleepCharts({
       </ChartCard>
 
       {/* 3. Sleep Trends Line Chart (Last 30 Days) */}
-            {/* 3. NEW: Sleep Trends Line Chart (Last 30 Days) */}
       <ChartCard>
         <div className="flex flex-wrap items-center justify-between mb-2 gap-y-1">
+          {/* 4. Added the dynamic header string here as well */}
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mr-2">
-            Sleep Trends
+            Sleep Trends <span className="text-sm font-normal text-gray-500">({headerTimeStr})</span>
           </h3>
           
-          {/* Custom Legend */}
           <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
-            
-            {/* Total (Thick Gray Line) */}
             <div className="flex items-center gap-1.5">
-              <div 
-                className="rounded-full" 
-                style={{ width: '16px', height: '4px', backgroundColor: '#374151' }} 
-              />
+              <div className="rounded-full" style={{ width: '16px', height: '4px', backgroundColor: '#374151' }} />
               <span>Total</span>
             </div>
-
-            {/* Nap (Thin Purple Line) */}
             <div className="flex items-center gap-1.5">
-              <div 
-                className="rounded-full" 
-                style={{ width: '16px', height: '2px', backgroundColor: '#c084fc' }} 
-              />
+              <div className="rounded-full" style={{ width: '16px', height: '2px', backgroundColor: '#c084fc' }} />
               <span>Nap</span>
             </div>
-
-            {/* Night (Thin Blue Line) */}
             <div className="flex items-center gap-1.5">
-              <div 
-                className="rounded-full" 
-                style={{ width: '16px', height: '2px', backgroundColor: '#3b82f6' }} 
-              />
+              <div className="rounded-full" style={{ width: '16px', height: '2px', backgroundColor: '#3b82f6' }} />
               <span>Night</span>
             </div>
-
           </div>
         </div>
 
@@ -227,12 +215,10 @@ export default function SleepCharts({
         </div>
       </ChartCard>
 
-      {/* 5. Night Wake-ups Line Chart (All Time) */}
+      {/* 4. Night Wake-ups Line Chart (All Time) */}
       <ChartCard>
-        {/* NEW: Stats row above the chart */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <StatCard
-            // Adjust prop names to match your StatCard implementation
             label="Night wake-ups"
             value={medianWakeupsLast14.toFixed(0)}
             color="emerald"
@@ -262,8 +248,8 @@ export default function SleepCharts({
                   <XAxis
                     dataKey="label"
                     tick={{ fontSize: 10 }}
-                    interval="preserveStartEnd"  // show first & last, auto-thin the rest
-                    minTickGap={12}              // pixel gap between ticks before thinning more
+                    interval="preserveStartEnd"  
+                    minTickGap={12}              
                   />
                   
                   <YAxis tick={{ fontSize: 12 }} width={30} />
@@ -271,14 +257,13 @@ export default function SleepCharts({
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px' }}
                     itemStyle={{ fontSize: '12px', padding: 0 }}
-                    // label is already a string like "Mon 3 Feb"
                     labelFormatter={(label) => label as string}
                     formatter={(value) => [`${value} wake-ups`, 'Wake-ups']}
                   />
                   
                   <Line 
                     type="monotone" 
-                    dataKey="wakeups"        // still fine, this field exists on wakeupsChartData
+                    dataKey="wakeups"        
                     stroke="#0d9488" 
                     strokeWidth={2} 
                     dot={false}

@@ -1,4 +1,5 @@
 // lib/sleep-logic.ts
+import { DAY_START_HOUR } from './constants';
 
 // ================= HELPER FUNCTIONS =================
 export const formatTime = (dateStr: string) => {
@@ -42,8 +43,8 @@ export const getMedian = (numbers: number[]): number => {
 
 export const getDateKey = (dateStr: string): string => {
   const date = new Date(dateStr);
-  // Standard 7am cutoff (Used for Night Sleep logic and generic grouping)
-  if (date.getHours() < 7) {
+  // Standard cutoff (Used for Night Sleep logic and generic grouping)
+  if (date.getHours() < DAY_START_HOUR) {
     date.setDate(date.getDate() - 1);
   }
   const year = date.getFullYear();
@@ -318,8 +319,8 @@ export function processSleepStats(sleepEvents: any[]) {
   const medianBedTime = decimalToTime(getMedian(recentBedTimes));
   const medianWakeTime = decimalToTime(getMedian(recentWakeUpTimes));
 
-  // =========================================================
-  // 3. NAP STATS
+    // =========================================================
+  // 3. NAP STATS & WAKE WINDOWS
   // =========================================================
   
   const naps = completedSleeps.filter((e: any) => !nightEventIds.has(e.id));
@@ -330,18 +331,43 @@ export function processSleepStats(sleepEvents: any[]) {
 
   const napsByDayCount: { [key: string]: number } = {};
   naps.forEach((nap: any) => {
-    const d = new Date(nap.startTime);
-    if (d.getHours() < 4) d.setDate(d.getDate() - 1);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const key = `${year}-${month}-${day}`;
+    const key = getDateKey(nap.startTime);
     napsByDayCount[key] = (napsByDayCount[key] || 0) + 1;
   });
   const dailyNapCounts = Object.values(napsByDayCount);
   const avgNapsPerDay = dailyNapCounts.length > 0
     ? (dailyNapCounts.reduce((a, b) => a + b, 0) / dailyNapCounts.length).toFixed(1)
     : "0.0";
+
+  // NEW: Calculate Median Wake Window (time between sleeps) for the last 14 days
+  const now = Date.now();
+  const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
+  const recentSleeps = sortedSleeps.filter(s => new Date(s.startTime).getTime() > fourteenDaysAgo);
+  
+  const wakeWindows: number[] = [];
+  for (let i = 0; i < recentSleeps.length - 1; i++) {
+    const currentSleep = recentSleeps[i];
+    const nextSleep = recentSleeps[i + 1];
+    
+    const aIsNight = nightEventIds.has(currentSleep.id);
+    const bIsNight = nightEventIds.has(nextSleep.id);
+    
+    const gapMins = (new Date(nextSleep.startTime).getTime() - new Date(currentSleep.endTime).getTime()) / 60000;
+    
+    if (gapMins > 0) {
+      // If both are night sleeps and the gap is < 4 hours, it's a night wake-up, NOT a daytime wake window.
+      const isNightWakeup = aIsNight && bIsNight && gapMins < 240;
+      
+      // Also filter out > 12 hour gaps to avoid skewing data if a day of naps wasn't logged.
+      if (!isNightWakeup && gapMins < 720) {
+        wakeWindows.push(gapMins);
+      }
+    }
+  }
+
+  const medianWakeWindow = getMedian(wakeWindows);
+  const avgWakeWindowHours = Math.floor(medianWakeWindow / 60);
+  const avgWakeWindowMins = Math.round(medianWakeWindow % 60);
 
   // =========================================================
   // 4. CHART DATA
@@ -357,9 +383,9 @@ export function processSleepStats(sleepEvents: any[]) {
     if (isNight) {
       dateKey = getDateKey(event.startTime);
     } else {
-      // Nap Logic: 4am cutoff
+      // Nap Logic: Day start cutoff
       const d = new Date(event.startTime);
-      if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+      if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
@@ -444,9 +470,10 @@ export function processSleepStats(sleepEvents: any[]) {
       avgNapsPerDay,
       medianWakeTime,
       medianBedTime,
-      // NEW:
       medianWakeupsLast14,
       longestStretchMinutesLast14,
+      avgWakeWindowHours,
+      avgWakeWindowMins,
     },
     chartData,
     trendData,
@@ -468,20 +495,17 @@ export function generateTimelineData(
   // Clone date to avoid mutating the original
   const current = new Date(referenceDate);
   
-  // Adjust for 7am cycle if it's "Today"
-  // (If specific historical date is passed, we assume it is set correctly to noon or similar)
-  if (new Date().toDateString() === current.toDateString() && current.getHours() < 7) {
+  if (new Date().toDateString() === current.toDateString() && current.getHours() < DAY_START_HOUR) {
     current.setDate(current.getDate() - 1);
   }
   
-  // Loop backwards from the reference date
   for (let i = 0; i < daysToGenerate; i++) {
     const d = new Date(current);
     d.setDate(d.getDate() - i);
     
-    // Window: 07:00 D to 07:00 D+1
+    // Window: DAY_START_HOUR D to DAY_START_HOUR D+1
     const rowStart = new Date(d);
-    rowStart.setHours(7, 0, 0, 0);
+    rowStart.setHours(DAY_START_HOUR, 0, 0, 0);
     
     const rowEnd = new Date(rowStart);
     rowEnd.setDate(rowEnd.getDate() + 1); 
@@ -532,56 +556,85 @@ export function generateTimelineData(
 }
 
 export function calculateSleepProbability(completedSleeps: any[]) {
+  // 144 slots = 24 hours * 6 (10‑minute intervals)
   const timeSlots = new Array(144).fill(0);
-  
-  // 1. Get Today's Key
+
+  // Offset in minutes based on configurable day start
+  const offsetMins = DAY_START_HOUR * 60;
+
+  // 1️⃣ Get today's logical key (based on DAY_START_HOUR)
   const todayKey = getDateKey(new Date().toISOString());
 
-  // 2. Filter out any sleep that belongs to the current unfinished day
-  const historicalSleeps = completedSleeps.filter((e: any) => 
-    getDateKey(e.startTime) !== todayKey
+  // 2️⃣ Remove sleeps that belong to the current unfinished logical day
+  const historicalSleeps = completedSleeps.filter(
+    (e: any) => getDateKey(e.startTime) !== todayKey
   );
 
-  // 3. Calculate unique days based on HISTORICAL data only
-  const uniqueDays = new Set(historicalSleeps.map((e: any) => getDateKey(e.startTime))).size || 1;
+  // 3️⃣ Count how many unique logical days we have
+  const uniqueDays =
+    new Set(
+      historicalSleeps.map((e: any) => getDateKey(e.startTime))
+    ).size || 1;
 
-  // 4. Iterate over HISTORICAL sleeps
+  // 4️⃣ Fill the time slots
   historicalSleeps.forEach((event: any) => {
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
-    let startMins = (start.getHours() * 60 + start.getMinutes()) - 420;
+
+    let startMins =
+      start.getHours() * 60 + start.getMinutes() - offsetMins;
     if (startMins < 0) startMins += 1440;
-    let endMins = (end.getHours() * 60 + end.getMinutes()) - 420;
+
+    let endMins =
+      end.getHours() * 60 + end.getMinutes() - offsetMins;
     if (endMins < 0) endMins += 1440;
-    if (endMins < startMins) endMins = 1440; 
+
+    // Handle sleep crossing logical midnight
+    if (endMins < startMins) {
+      endMins += 1440;
+    }
+
     const startIndex = Math.floor(startMins / 10);
     const endIndex = Math.floor(endMins / 10);
 
     for (let i = startIndex; i <= endIndex; i++) {
-      if (i >= 0 && i < 144) timeSlots[i]++;
+      const wrappedIndex = i % 144;
+      timeSlots[wrappedIndex]++;
     }
   });
 
+  // 5️⃣ Convert counts into percentages
   const rawData = timeSlots.map((count, index) => {
-    const totalMinutes = index * 10 + 420; 
-    let h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    if (h >= 24) h -= 24;
+    const totalMinutes = index * 10 + offsetMins;
+
+    let hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours >= 24) hours -= 24;
+
     return {
-      time: `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`,
-      percent: (count / uniqueDays) * 100
+      time: `${hours.toString().padStart(2, '0')}:${minutes
+        .toString()
+        .padStart(2, '0')}`,
+      percent: (count / uniqueDays) * 100,
     };
   });
 
+  // 6️⃣ Smooth the curve (5-point rolling average)
   return rawData.map((point, i, arr) => {
     const len = arr.length;
-    const sum = 
-      arr[(i - 2 + len) % len].percent + 
-      arr[(i - 1 + len) % len].percent + 
-      point.percent + 
-      arr[(i + 1) % len].percent + 
+
+    const sum =
+      arr[(i - 2 + len) % len].percent +
+      arr[(i - 1 + len) % len].percent +
+      point.percent +
+      arr[(i + 1) % len].percent +
       arr[(i + 2) % len].percent;
-    return { time: point.time, percent: sum / 5 };
+
+    return {
+      time: point.time,
+      percent: sum / 5,
+    };
   });
 }
 

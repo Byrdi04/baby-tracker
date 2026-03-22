@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { DAY_START_HOUR } from '@/lib/constants';
 
 type SleepBlock = {
   left: number;
@@ -42,14 +43,15 @@ export default function SleepTimeline({ data, showHistoryLink = false }: Props) 
 
     const now = new Date();
     const checkDate = new Date();
-    // Use 7am logic for consistency
-    if (checkDate.getHours() < 7) checkDate.setDate(checkDate.getDate() - 1);
+    
+    // Use the dynamic logic for consistency
+    if (checkDate.getHours() < DAY_START_HOUR) checkDate.setDate(checkDate.getDate() - 1);
     
     setTodayLabel(checkDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }));
 
     let hours = now.getHours() + (now.getMinutes() / 60);
-    if (hours < 7) hours += 24; 
-    const relativeHours = hours - 7;
+    if (hours < DAY_START_HOUR) hours += 24; 
+    const relativeHours = hours - DAY_START_HOUR;
     setCurrentPos((relativeHours / 24) * 100);
 
     return () => window.removeEventListener('click', handleGlobalClick);
@@ -89,7 +91,9 @@ export default function SleepTimeline({ data, showHistoryLink = false }: Props) 
       
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Sleep Schedule <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(7am - 7am)</span>
+          Sleep Schedule <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+            ({DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR}{DAY_START_HOUR >= 12 ? 'pm' : 'am'} - {DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR}{DAY_START_HOUR >= 12 ? 'pm' : 'am'})
+          </span>
         </h3>
         
         {showHistoryLink && (
