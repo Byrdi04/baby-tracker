@@ -5,52 +5,57 @@ type Stats = {
   medianDailyMins: number;
   medianNightHours: number;
   medianNightMins: number;
-  avgNapsPerDay: string;
   medianWakeTime: string;
   medianBedTime: string;
-  // NEW: Added the wake window stats to the type
-  avgWakeWindowHours: number;
-  avgWakeWindowMins: number; 
+  // New "Last Night" variables
+  lastNightHours: number;
+  lastNightMins: number;
+  lastTotalHours: number;
+  lastTotalMins: number;
 };
 
 export default function SleepStats({ stats }: { stats: Stats }) {
   return (
-    <section className="grid grid-cols-2 gap-2 mb-4">
-      <StatCard 
-        label="Avg total sleep" 
-        value={`${stats.medianDailyHours}h ${stats.medianDailyMins}m`} 
-        color="blue" 
-      />
-      <StatCard 
-        label="Avg night sleep" 
-        value={stats.medianNightHours > 0 ? `${stats.medianNightHours}h ${stats.medianNightMins}m` : `${stats.medianNightMins}m`}
-        color="indigo" 
-      />
-      
-      {/* REPLACED: Now shows Awake Time instead of Nap Length */}
-      <StatCard 
-        label="Avg awake time" 
-        value={stats.avgWakeWindowHours > 0 ? `${stats.avgWakeWindowHours}h ${stats.avgWakeWindowMins}m` : `${stats.avgWakeWindowMins}m`}
-        color="fuchsia" 
-      />
-      
-      <StatCard 
-        label="Avg naps pr. day" 
-        value={Number(stats.avgNapsPerDay).toFixed(0)}
-        color="purple" 
-      />
-      <StatCard 
-        label="Avg wake up time" 
-        value={stats.medianWakeTime}
-        icon='☀️'
-        color="yellow" 
-      />
-      <StatCard 
-        label="Avg bedtime" 
-        value={stats.medianBedTime}
-        icon='🛌'
-        color="orange" 
-      />
-    </section>
+    <div className="mb-4">
+      <section className="grid grid-cols-2 gap-2">
+        {/* Row 1: 14-Day Averages */}
+        <StatCard 
+          label="Avg total sleep" 
+          value={`${stats.medianDailyHours}h ${stats.medianDailyMins}m`} 
+          color="blue" 
+        />
+        <StatCard 
+          label="Avg night sleep" 
+          value={stats.medianNightHours > 0 ? `${stats.medianNightHours}h ${stats.medianNightMins}m` : `${stats.medianNightMins}m`}
+          color="indigo" 
+        />
+        
+        {/* Row 2: REPLACED CARDS (Last Night / Last 24h) */}
+        <StatCard 
+          label="Total sleep yesterday" 
+          value={`${stats.lastTotalHours}h ${stats.lastTotalMins}m`}
+          color="fuchsia" 
+        />
+        <StatCard 
+          label="Last night's sleep" 
+          value={`${stats.lastNightHours}h ${stats.lastNightMins}m`}
+          color="purple" 
+        />
+        
+        {/* Row 3: Timings */}
+        <StatCard 
+          label="Avg wake up time" 
+          value={stats.medianWakeTime}
+          icon='☀️'
+          color="yellow" 
+        />
+        <StatCard 
+          label="Avg bedtime" 
+          value={stats.medianBedTime}
+          icon='🛌'
+          color="orange" 
+        />
+      </section>
+    </div>
   );
 }

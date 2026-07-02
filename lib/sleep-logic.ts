@@ -149,7 +149,6 @@ export function calculateNightWakeups(
 export function processSleepStats(sleepEvents: any[]) {
   const completedSleeps = sleepEvents.filter((e: any) => e.endTime);
   
-  // Sort chronologically for analysis
   const sortedSleeps = [...completedSleeps].sort((a, b) => 
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
@@ -159,116 +158,69 @@ export function processSleepStats(sleepEvents: any[]) {
   // =========================================================
   // 1. ROBUST NIGHT DETECTION (Anchor & Stitch)
   // =========================================================
-
-  // 📍 PHASE A: IDENTIFY "ANCHORS" 
-  // Any sleep that touches the Core Night is definitely Night Sleep.
-  
   sortedSleeps.forEach(event => {
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
     
-    // Convert times to decimal hours (e.g., 4:30 AM = 4.5)
     const startDec = start.getHours() + (start.getMinutes() / 60);
     const endDec = end.getHours() + (end.getMinutes() / 60);
 
     let isAnchor = false;
 
-    // ⚙️ CONFIG: CORE NIGHT HOURS (22:00 to 04:30)
-    // We check if the sleep overlaps with this strict window.
-    
-    // Check 1: Does it START during Core Night?
-    // Logic: Time is greater than 22.0 (10PM) OR less than 4.5 (4:30AM)
-    if (startDec >= 22.0 || startDec < 4.5) {
-      isAnchor = true;
-    }
+    if (startDec >= 22.0 || startDec < 4.5) isAnchor = true;
+    if (endDec > 22.0 || endDec < 4.5) isAnchor = true;
 
-    // Check 2: Does it END during Core Night?
-    // Logic: Time is greater than 22.0 OR less than 4.5
-    // Note: We use > 22 to avoid counting a nap ending at 21:59
-    if (endDec > 22.0 || endDec < 4.5) {
-      isAnchor = true;
-    }
-
-    // Check 3: Is it a Long Evening Sleep?
-    // Logic: Starts after 18:00 and lasts > 3 hours.
-    // This catches nights where baby sleeps 19:00 - 23:00 (which touches core).
     const duration = getDurationMinutes(event.startTime, event.endTime);
-    if (startDec >= 18.0 && duration > 180) {
-      isAnchor = true;
-    }
+    if (startDec >= 18.0 && duration > 180) isAnchor = true;
 
-    if (isAnchor) {
-      nightEventIds.add(event.id);
-    }
+    if (isAnchor) nightEventIds.add(event.id);
   });
 
-  // 📍 PHASE B: STITCH NEIGHBORS
-  // Look at sleeps next to the Anchors and see if they belong to the night.
-  // We run this twice to ensure chains propagate.
-  
   for (let pass = 0; pass < 2; pass++) {
     for (let i = 0; i < sortedSleeps.length; i++) {
       const current = sortedSleeps[i];
-      
-      // Only stitch if we are currently looking at a confirmed Night Event
       if (!nightEventIds.has(current.id)) continue;
 
       const currStart = new Date(current.startTime).getTime();
       const currEnd = new Date(current.endTime).getTime();
 
-      // --- STITCH BACKWARDS (Bedtime connections) ---
+      // Stitch backwards
       if (i > 0) {
         const prev = sortedSleeps[i - 1];
         if (!nightEventIds.has(prev.id)) {
           const prevEnd = new Date(prev.endTime).getTime();
           const gapMins = (currStart - prevEnd) / 60000;
           const prevStartH = new Date(prev.startTime).getHours();
-
-          // Rule: Gap < 60 mins AND Prev started in the evening (after 17:00 or very early morning)
           if (gapMins < 60 && (prevStartH >= 17 || prevStartH < 4)) {
             nightEventIds.add(prev.id);
           }
         }
       }
 
-      // --- STITCH FORWARDS (Wakeup connections) ---
+      // Stitch forwards
       if (i < sortedSleeps.length - 1) {
         const next = sortedSleeps[i + 1];
         if (!nightEventIds.has(next.id)) {
           const nextStart = new Date(next.startTime).getTime();
           const gapMins = (nextStart - currEnd) / 60000;
           const nextStartH = new Date(next.startTime).getHours();
-
-          // ⚙️ CONFIG: FORWARD GAP (Requested: 70 mins)
-          // We only check sleeps that happened within 70 mins of waking up.
           if (gapMins < 70) { 
-
-            // Strict Morning Rules to avoid counting 06:55 naps as night sleep:
-            
-            // Rule A: It starts REALLY early (before 06:00 AM)
-            // Logic: If baby wakes at 05:00 and sleeps at 05:30, it is still night.
             const isEarlyMorning = nextStartH < 6;
-
-            // Rule B: It's a "False Wake Up" (Gap < 20 mins)
-            // Logic: If baby wakes at 06:30 but falls back asleep at 06:40, count it.
-            // But NOT if it starts after 07:00 (that is the day).
             const isFalseWakeup = gapMins < 20 && nextStartH < 7;
-
-            // Apply Rules:
-            if (isEarlyMorning || isFalseWakeup) {
-              nightEventIds.add(next.id);
-            }
+            if (isEarlyMorning || isFalseWakeup) nightEventIds.add(next.id);
           }
         }
       }
     }
   }
 
+  // 👇 NEW: Define the 14-day cutoff point for the Stat Cards
+  const nowMs = Date.now();
+  const fourteenDaysAgoMs = nowMs - 14 * 24 * 60 * 60 * 1000;
+
   // =========================================================
   // 2. CALCULATE STATISTICS (Bedtime / Wake Up)
   // =========================================================
-  
-  // Group Night Events by "Night Date" to find start/end of the night
   const nightGroups: { [key: string]: { start: Date, end: Date, duration: number } } = {};
 
   sortedSleeps.forEach(event => {
@@ -281,11 +233,8 @@ export function processSleepStats(sleepEvents: any[]) {
       if (!nightGroups[key]) {
         nightGroups[key] = { start: s, end: e, duration: dur };
       } else {
-        // Update Min Start
         if (s < nightGroups[key].start) nightGroups[key].start = s;
-        // Update Max End
         if (e > nightGroups[key].end) nightGroups[key].end = e;
-        // Add duration
         nightGroups[key].duration += dur;
       }
     }
@@ -296,55 +245,49 @@ export function processSleepStats(sleepEvents: any[]) {
   const wakeUpTimes: number[] = [];
 
   Object.values(nightGroups).forEach(group => {
-    // Duration
-    nightSessions.push(group.duration); 
+    // 👇 NEW: Only calculate medians using the last 14 days
+    if (group.start.getTime() >= fourteenDaysAgoMs) {
+      nightSessions.push(group.duration); 
 
-    // Bedtime
-    let bedTimeDec = group.start.getHours() + (group.start.getMinutes() / 60);
-    if (bedTimeDec < 12) bedTimeDec += 24; 
-    bedTimes.push(bedTimeDec);
+      let bedTimeDec = group.start.getHours() + (group.start.getMinutes() / 60);
+      if (bedTimeDec < 12) bedTimeDec += 24; 
+      bedTimes.push(bedTimeDec);
 
-    // Wake Up Time
-    const wakeTimeDec = group.end.getHours() + (group.end.getMinutes() / 60);
-    wakeUpTimes.push(wakeTimeDec);
+      const wakeTimeDec = group.end.getHours() + (group.end.getMinutes() / 60);
+      wakeUpTimes.push(wakeTimeDec);
+    }
   });
 
-  // Calculate Averages
   const medianNight = getMedian(nightSessions);
   const medianNightHours = Math.floor(medianNight / 60);
   const medianNightMins = Math.round(medianNight % 60);
   
-  const recentBedTimes = bedTimes.slice(-7);
-  const recentWakeUpTimes = wakeUpTimes.slice(-7);
-  const medianBedTime = decimalToTime(getMedian(recentBedTimes));
-  const medianWakeTime = decimalToTime(getMedian(recentWakeUpTimes));
+  const medianBedTime = decimalToTime(getMedian(bedTimes));
+  const medianWakeTime = decimalToTime(getMedian(wakeUpTimes));
 
-    // =========================================================
-  // 3. NAP STATS & WAKE WINDOWS
   // =========================================================
-  
+  // 3. NAP STATS & WAKE WINDOWS (Last 14 Days)
+  // =========================================================
   const naps = completedSleeps.filter((e: any) => !nightEventIds.has(e.id));
-  const napDurations = naps.map((e: any) => getDurationMinutes(e.startTime, e.endTime));
-  const medianNap = getMedian(napDurations);
-  const medianNapHours = Math.floor(medianNap / 60);
-  const medianNapMins = Math.round(medianNap % 60);
-
+  
+  // 👇 NEW: Filter naps down to last 14 days
+  const recentNaps = naps.filter((n: any) => new Date(n.startTime).getTime() >= fourteenDaysAgoMs);
+  
   const napsByDayCount: { [key: string]: number } = {};
-  naps.forEach((nap: any) => {
+  recentNaps.forEach((nap: any) => {
     const key = getDateKey(nap.startTime);
     napsByDayCount[key] = (napsByDayCount[key] || 0) + 1;
   });
+  
   const dailyNapCounts = Object.values(napsByDayCount);
   const avgNapsPerDay = dailyNapCounts.length > 0
     ? (dailyNapCounts.reduce((a, b) => a + b, 0) / dailyNapCounts.length).toFixed(1)
     : "0.0";
 
-  // NEW: Calculate Median Wake Window (time between sleeps) for the last 14 days
-  const now = Date.now();
-  const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
-  const recentSleeps = sortedSleeps.filter(s => new Date(s.startTime).getTime() > fourteenDaysAgo);
-  
+  // Wake Windows (Already set to 14 days in previous step!)
+  const recentSleeps = sortedSleeps.filter(s => new Date(s.startTime).getTime() > fourteenDaysAgoMs);
   const wakeWindows: number[] = [];
+  
   for (let i = 0; i < recentSleeps.length - 1; i++) {
     const currentSleep = recentSleeps[i];
     const nextSleep = recentSleeps[i + 1];
@@ -355,10 +298,7 @@ export function processSleepStats(sleepEvents: any[]) {
     const gapMins = (new Date(nextSleep.startTime).getTime() - new Date(currentSleep.endTime).getTime()) / 60000;
     
     if (gapMins > 0) {
-      // If both are night sleeps and the gap is < 4 hours, it's a night wake-up, NOT a daytime wake window.
       const isNightWakeup = aIsNight && bIsNight && gapMins < 240;
-      
-      // Also filter out > 12 hour gaps to avoid skewing data if a day of naps wasn't logged.
       if (!isNightWakeup && gapMins < 720) {
         wakeWindows.push(gapMins);
       }
@@ -372,30 +312,36 @@ export function processSleepStats(sleepEvents: any[]) {
   // =========================================================
   // 4. CHART DATA
   // =========================================================
-  
   const sleepByDay: { [key: string]: { night: number; nap: number } } = {};
   
   completedSleeps.forEach((event: any) => {
     const duration = getDurationMinutes(event.startTime, event.endTime);
     const isNight = nightEventIds.has(event.id);
-    let dateKey: string;
-
-    if (isNight) {
-      dateKey = getDateKey(event.startTime);
-    } else {
-      // Nap Logic: Day start cutoff
-      const d = new Date(event.startTime);
-      if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      dateKey = `${year}-${month}-${day}`;
-    }
+    const dateKey = getDateKey(event.startTime);
 
     if (!sleepByDay[dateKey]) sleepByDay[dateKey] = { night: 0, nap: 0 };
     if (isNight) sleepByDay[dateKey].night += duration;
     else sleepByDay[dateKey].nap += duration;
   });
+
+  // 👇 NEW: Find the most recent day that actually had a night sleep recorded
+  const sortedDateKeys = Object.keys(sleepByDay).sort();
+  const lastNightKey = [...sortedDateKeys].reverse().find(key => sleepByDay[key].night > 0);
+
+  let lastNightHours = 0, lastNightMins = 0;
+  let lastTotalHours = 0, lastTotalMins = 0;
+
+  if (lastNightKey) {
+    const lastNightDuration = sleepByDay[lastNightKey].night;
+    const lastTotalDuration = sleepByDay[lastNightKey].night + sleepByDay[lastNightKey].nap;
+
+    lastNightHours = Math.floor(lastNightDuration / 60);
+    lastNightMins = Math.round(lastNightDuration % 60);
+
+    lastTotalHours = Math.floor(lastTotalDuration / 60);
+    lastTotalMins = Math.round(lastTotalDuration % 60);
+  }
+  // 👆 END NEW BLOCK
 
   const chartData = Object.entries(sleepByDay)
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -406,15 +352,22 @@ export function processSleepStats(sleepEvents: any[]) {
       napHours: Math.round((data.nap / 60) * 10) / 10
     }));
 
-  const dailyTotalMinutes = Object.values(sleepByDay).map(d => d.night + d.nap);
-  const medianDailySleep = getMedian(dailyTotalMinutes);
+  // 👇 NEW: Calculate Median Daily Sleep using ONLY the last 14 days
+  const recentDailyTotals: number[] = [];
+  Object.entries(sleepByDay).forEach(([dateKey, data]) => {
+    // Convert YYYY-MM-DD back to timestamp for comparison
+    const dateMs = new Date(dateKey).getTime();
+    if (dateMs >= fourteenDaysAgoMs - (24 * 60 * 60 * 1000)) { // 1 day buffer for timezones
+      recentDailyTotals.push(data.night + data.nap);
+    }
+  });
+
+  const medianDailySleep = getMedian(recentDailyTotals);
   const medianDailyHours = Math.floor(medianDailySleep / 60);
   const medianDailyMins = Math.round(medianDailySleep % 60);
 
-  // 1. Get the Key for "Today" based on your 7am rule
   const todayKey = getDateKey(new Date().toISOString());
 
-  // Trend Data (Last 30 Days)
   const trendData = Object.entries(sleepByDay)
     .filter(([key]) => key !== todayKey)
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -425,7 +378,6 @@ export function processSleepStats(sleepEvents: any[]) {
       total: Math.round(((data.night + data.nap) / 60) * 10) / 10
     }));
 
-  // Histograms
   const durationBuckets: { [key: string]: number } = {};
   const maxBuckets = 6;
   for(let i=0; i<maxBuckets; i++) durationBuckets[`${i*30}-${(i+1)*30-1}m`] = 0;
@@ -454,11 +406,11 @@ export function processSleepStats(sleepEvents: any[]) {
   });
   const napStartTimeData = Object.entries(startTimeBuckets).map(([label, value]) => ({ label, value }));
 
-    const {
-      wakeupsData,
-      medianWakeupsLast14,
-      longestStretchMinutesLast14,
-    } = calculateNightWakeups(nightEventIds, completedSleeps);
+  const {
+    wakeupsData,
+    medianWakeupsLast14,
+    longestStretchMinutesLast14,
+  } = calculateNightWakeups(nightEventIds, completedSleeps);
 
   return {
     nightEventIds,
@@ -466,7 +418,6 @@ export function processSleepStats(sleepEvents: any[]) {
     stats: {
       medianDailyHours, medianDailyMins,
       medianNightHours, medianNightMins,
-      medianNapHours, medianNapMins,
       avgNapsPerDay,
       medianWakeTime,
       medianBedTime,
@@ -474,6 +425,10 @@ export function processSleepStats(sleepEvents: any[]) {
       longestStretchMinutesLast14,
       avgWakeWindowHours,
       avgWakeWindowMins,
+      lastNightHours,
+      lastNightMins,
+      lastTotalHours,
+      lastTotalMins,
     },
     chartData,
     trendData,

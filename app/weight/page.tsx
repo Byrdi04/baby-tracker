@@ -6,6 +6,7 @@ import StatCard from '@/components/ui/StatCard';
 import { STATIC_GROWTH_DATA } from '@/data/growth_curve';
 import { calculateInterpolatedPercentile } from '@/lib/growthUtils';
 import EventList from '@/components/events/EventList';
+import PercentileChart from '@/components/weight/PercentileChart';
 
 export default function WeightPage() {
   // 1. Fetch User Data
@@ -18,31 +19,37 @@ export default function WeightPage() {
   const weightEventsDesc = [...weightEventsAsc].reverse();
 
   // ============================================================
+  // CALCULATE TIME SHIFT FOR ACTUAL AGE PERCENTILES
+  // ============================================================
+  const userTimes = weightEventsAsc.map(e => new Date(e.startTime).getTime());
+  const userStart = userTimes.length > 0 ? userTimes[0] : 0;
+  const whoStart = STATIC_GROWTH_DATA.length > 0 ? new Date(STATIC_GROWTH_DATA[0].date).getTime() : 0;
+  
+  const shiftAmount = (userStart > 0 && whoStart > 0) ? whoStart - userStart : 0;
+
+  // ============================================================
   // STATISTICS CALCULATIONS
   // ============================================================
-  
-  // Basic Stats
   const latestEvent = weightEventsAsc[weightEventsAsc.length - 1];
   const prevEvent = weightEventsAsc[weightEventsAsc.length - 2];
   
-  // Extract weights (helper to parse JSON safely)
   const getWeight = (e: any) => e ? parseFloat(JSON.parse(e.data).amount) : 0;
   const latestWeight = getWeight(latestEvent);
   const prevWeight = getWeight(prevEvent);
 
-  // -- 1. Current Percentile Calculation --
   let currentPercentile = "—";
   if (latestEvent) {
+    const latestTime = new Date(latestEvent.startTime).getTime();
+    const actualQueryTime = new Date(latestTime + shiftAmount).toISOString();
+    
     const pVal = calculateInterpolatedPercentile(
       latestWeight, 
-      latestEvent.startTime, 
+      actualQueryTime, 
       STATIC_GROWTH_DATA
     );
     if (pVal) currentPercentile = pVal;
   }
 
-  // -- 2. Latest Change (Immediate - Last 1 Step) --
-  // Used for Card #3
   let weightDiffGrams = 0;
   let hasHistory = false;
 
@@ -52,16 +59,11 @@ export default function WeightPage() {
     weightDiffGrams = Math.round(diffKg * 1000);
   }
 
-  // -- 3. Growth Rate (Windowed - Last 5 Steps) --
-  // Used for Card #4
   let rateLabel = "Growth";
   let rateValue = "—";
-  
-  // 👇 FIX: Add ': any' here to prevent the TypeScript error
   let rateColor: any = "gray"; 
 
   const count = weightEventsAsc.length;
-  
   if (count >= 2) {
     const lastIndex = count - 1;
     const pastIndex = Math.max(0, count - 5); 
@@ -81,8 +83,6 @@ export default function WeightPage() {
       
       rateLabel = `Growth (over ${daysDiff}d)`;
       rateValue = `${calculatedRate > 0 ? '+' : ''}${calculatedRate} g/day`;
-      
-      // Changed colors to standard 'green'/'red' to match your other cards safely
       rateColor = calculatedRate >= 0 ? 'green' : 'red'; 
     }
   }
@@ -92,34 +92,44 @@ export default function WeightPage() {
   // ============================================================
   const userPoints = weightEventsAsc.map(event => {
     const weight = parseFloat(JSON.parse(event.data).amount) || 0;
+    const eventTime = new Date(event.startTime).getTime();
     
-    // Calculate percentile for this specific historical point
-    const percentile = calculateInterpolatedPercentile(
+    const correctedPercentile = calculateInterpolatedPercentile(
       weight, 
       event.startTime, 
       STATIC_GROWTH_DATA
     );
 
+    const actualQueryTime = new Date(eventTime + shiftAmount).toISOString();
+    const actualPercentile = calculateInterpolatedPercentile(
+      weight, 
+      actualQueryTime, 
+      STATIC_GROWTH_DATA
+    );
+
     return {
-      timestamp: new Date(event.startTime).getTime(),
+      timestamp: eventTime,
       weight: weight,
-      percentile: percentile,
+      percentile: correctedPercentile,     
+      actualPercentile: actualPercentile,  
       isUser: true
     };
   });
 
   const referencePoints = STATIC_GROWTH_DATA.map(row => ({
     timestamp: new Date(row.date).getTime(),
+    // 👇 ADDED THE NEW LOWER PERCENTILE COLUMNS HERE
+    p01: row.p01, p1: row.p1, p3: row.p3, p5: row.p5, p10: row.p10,
     p15: row.p15, p25: row.p25, p50: row.p50, p75: row.p75, p85: row.p85,
     isUser: false
   }));
 
   let shiftedReferencePoints: any[] = [];
   if (userPoints.length > 0 && referencePoints.length > 0) {
-    const userStart = userPoints[0].timestamp; 
-    const whoStart = referencePoints[0].timestamp; 
-    const shiftAmount = whoStart - userStart; 
-    shiftedReferencePoints = referencePoints.map(pt => ({ ...pt, timestamp: pt.timestamp - shiftAmount }));
+    shiftedReferencePoints = referencePoints.map(pt => ({ 
+      ...pt, 
+      timestamp: pt.timestamp - shiftAmount 
+    }));
   } else {
     shiftedReferencePoints = referencePoints;
   }
@@ -141,19 +151,36 @@ export default function WeightPage() {
   const relevantCorrected = getRelevantReferencePoints(referencePoints);
   const relevantActual = getRelevantReferencePoints(shiftedReferencePoints);
   
-  // 1. Corrected Data: Keep percentile for tooltip
   const combinedCorrected = [...userPoints, ...relevantCorrected]
     .sort((a, b) => a.timestamp - b.timestamp);
 
-  // 2. Actual Data: Remove 'percentile' so tooltip doesn't show it
   const userPointsForActual = userPoints.map(pt => ({
     ...pt,
-    percentile: undefined 
+    percentile: pt.actualPercentile 
   }));
 
   const combinedActual = [...userPointsForActual, ...relevantActual]
     .sort((a, b) => a.timestamp - b.timestamp);
 
+  // ============================================================
+  // 6. PERCENTILE TREND DATA
+  // ============================================================
+  const percentileTrendData = userPoints
+    .filter(pt => pt.actualPercentile) 
+    .map(pt => {
+      // 👇 Create a guaranteed string fallback to satisfy TypeScript
+      const safeLabel = pt.actualPercentile || '';
+      
+      const numStr = safeLabel.replace(/[^0-9.]/g, ''); 
+      const numVal = parseFloat(numStr);
+      
+      return {
+        timestamp: pt.timestamp,
+        value: isNaN(numVal) ? 50 : numVal, 
+        label: safeLabel // 👇 Now TypeScript knows this is strictly a string!
+      };
+    });
+    
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
       
@@ -164,21 +191,18 @@ export default function WeightPage() {
       {/* STATISTICS GRID */}
       <section className="grid grid-cols-2 gap-3 mb-6">
         
-        {/* Card 1: Current Weight */}
         <StatCard 
           label="Current weight" 
           value={latestWeight > 0 ? `${latestWeight} kg` : '—'} 
           color="sky" 
         />
         
-        {/* Card 2: Current Percentile */}
         <StatCard 
           label="Current percentile" 
           value={currentPercentile} 
           color="blue" 
         />
 
-        {/* Card 3: Latest Change (Last entry vs 2nd Last) */}
         <StatCard 
           label="Latest change" 
           value={
@@ -189,7 +213,6 @@ export default function WeightPage() {
           color={weightDiffGrams >= 0 ? 'green' : 'red'} 
         />
 
-        {/* Card 4: Growth Rate (Windowed Avg) */}
         <StatCard 
           label={rateLabel} 
           value={rateValue} 
@@ -200,9 +223,12 @@ export default function WeightPage() {
 
       {/* CHARTS */}
       <WeightChartSection 
-        correctedData={combinedCorrected} 
         actualData={combinedActual} 
+        correctedData={combinedCorrected} 
       />
+
+      {/* PERCENTILE TREND CHART */}
+      <PercentileChart data={percentileTrendData} />
 
       {/* Weight List */}
       <section>

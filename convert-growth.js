@@ -26,7 +26,8 @@ try {
   const tsData = dataRows.map((line, index) => {
     const cols = line.split(separator); 
 
-    if (cols.length < 6) {
+    // We now expect at least 11 columns (Date + 10 percentiles)
+    if (cols.length < 11) {
       console.warn(`⚠️ Skipping invalid row ${index + 2}: ${line}`);
       return null;
     }
@@ -50,11 +51,16 @@ try {
 
     return {
       date: isoDate,
-      p15: parseNum(cols[1]),
-      p25: parseNum(cols[2]),
-      p50: parseNum(cols[3]),
-      p75: parseNum(cols[4]),
-      p85: parseNum(cols[5]),
+      p01: parseNum(cols[1]),
+      p1:  parseNum(cols[2]),
+      p3:  parseNum(cols[3]),
+      p5:  parseNum(cols[4]),
+      p10: parseNum(cols[5]),
+      p15: parseNum(cols[6]),
+      p25: parseNum(cols[7]),
+      p50: parseNum(cols[8]),
+      p75: parseNum(cols[9]),
+      p85: parseNum(cols[10]),
     };
   }).filter(item => item !== null);
 

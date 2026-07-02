@@ -4,12 +4,17 @@ import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ChartCard from '@/components/ui/ChartCard';
 
-// 1. Define the TimeRange type so we can share it
 export type TimeRange = '1m' | '3m' | '6m' | '1y' | 'all';
 
 type CombinedDataPoint = {
   timestamp: number;
   weight?: number;
+  // 👇 ADDED NEW LOWER PERCENTILES TO TYPE
+  p01?: number; 
+  p1?: number;  
+  p3?: number;  
+  p5?: number;  
+  p10?: number; 
   p15?: number;
   p25?: number;
   p50?: number;
@@ -22,7 +27,6 @@ type CombinedDataPoint = {
 type Props = {
   chartData: CombinedDataPoint[];
   title?: string;
-  // 2. Add optional props for external control
   controlledRange?: TimeRange;
   onRangeChange?: (range: TimeRange) => void;
 };
@@ -46,10 +50,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="flex flex-col gap-1">
           {sortedPayload.map((entry: any, index: number) => {
             const isBaby = entry.name === 'weight';
-            const name = isBaby ? 'Baby' : entry.name.toUpperCase();
             
-            // Access the percentile passed from the page
-            // entry.payload is the data object for this specific dot
             const percentile = entry.payload.percentile;
 
             return (
@@ -59,7 +60,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                     {Number(entry.value).toFixed(2)} kg 
                   </span>
                   
-                  {/* 👈 Show percentile only for Baby */}
                   {isBaby && percentile && (
                     <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">
                       ({percentile})
@@ -79,29 +79,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function WeightCharts({ 
   chartData, 
   title = "Growth Chart",
-  controlledRange,   // New prop
-  onRangeChange      // New prop
+  controlledRange,   
+  onRangeChange      
 }: Props) {
   
-  // 3. Internal state (fallback if no parent controls this)
   const [internalRange, setInternalRange] = useState<TimeRange>('all');
-
-  // 4. Determine which range to use: The parent's or the internal one?
   const timeRange = controlledRange ?? internalRange;
 
-  // 👇 NEW: Determine dot size based on zoom level
   const dotRadius = useMemo(() => {
     switch (timeRange) {
-      case '1m': return 3;   // Largest dots
+      case '1m': return 3;   
       case '3m': return 2.5;
       case '6m': return 2;
       case '1y': return 1;
-      case 'all': return 1.5; // Smallest dots to prevent crowding
+      case 'all': return 1.5; 
       default: return 3;
     }
   }, [timeRange]);
 
-  // 5. Handle clicks: Notify parent if possible, otherwise set internal state
   const handleRangeClick = (range: TimeRange) => {
     if (onRangeChange) {
       onRangeChange(range);
@@ -110,8 +105,6 @@ export default function WeightCharts({
     }
   };
 
-  // ... (Keep existing minDomain, filteredData, yDomain, yTicks logic exactly as is) ...
-  // JUST COPY PASTE YOUR EXISTING MEMO LOGIC HERE
   const minDomain = useMemo(() => {
     if (timeRange === 'all') return 'dataMin';
     const cutoff = new Date();
@@ -124,23 +117,17 @@ export default function WeightCharts({
     return cutoff.getTime();
   }, [timeRange]);
 
-  // 2. (NEW) CALCULATE X-AXIS END (Horizon + 3 Days)
   const maxDomain = useMemo(() => {
-    // A. Find the latest "Real" moment (User Entry or Right Now)
-    // We explicitly ignore the future WHO points we added for line drawing.
     const now = Date.now();
     let maxUserTime = 0;
 
     chartData.forEach(pt => {
-      // We look at 'isUser' points to find the last weight log
       if (pt.isUser && pt.timestamp > maxUserTime) {
         maxUserTime = pt.timestamp;
       }
     });
 
     const horizon = Math.max(now, maxUserTime);
-
-    // B. Add exactly 3 Days in milliseconds
     const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
     
     return horizon + threeDaysMs;
@@ -161,7 +148,8 @@ export default function WeightCharts({
         min = Math.min(min, pt.weight);
         max = Math.max(max, pt.weight);
       }
-      if (pt.p15 !== undefined) min = Math.min(min, pt.p15);
+      // 👇 UPDATED: Use p01 for minimum calculation so it zooms out enough to show the new lines
+      if (pt.p01 !== undefined) min = Math.min(min, pt.p01);
       if (pt.p85 !== undefined) max = Math.max(max, pt.p85);
     });
     if (min === Infinity) return [0, 10];
@@ -180,7 +168,6 @@ export default function WeightCharts({
     }
     return ticks;
   }, [yDomain]);
-  // ... (End of Memo logic) ...
 
   const dateFormatter = (tickItem: number) => {
     return new Date(tickItem).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -221,10 +208,17 @@ export default function WeightCharts({
               <Tooltip content={<CustomTooltip />} />
               
               <Line type="monotone" dataKey="p85" stroke="#018221ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p15" stroke="#d7c203ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
               <Line type="monotone" dataKey="p75" stroke="#029f05ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p25" stroke="#97b200ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
               <Line type="monotone" dataKey="p50" stroke="#01ca18ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p25" stroke="#97b200ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p15" stroke="#d7c203ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
+
+              {/* 👇 ADDED NEW LOWER PERCENTILE LINES HERE */}
+              <Line type="monotone" dataKey="p10" stroke="#eab308" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p5"  stroke="#f59e0b" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p3"  stroke="#ea580c" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p1"  stroke="#ef4444" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
+              <Line type="monotone" dataKey="p01" stroke="#dc2626" strokeWidth={1} strokeDasharray="2 2" dot={false} connectNulls />
 
               <Line 
                 type="monotone" 
@@ -237,7 +231,6 @@ export default function WeightCharts({
                   strokeWidth: 1, 
                   r: dotRadius 
                 }}
-                // 👇 Make the hover effect slightly larger than the normal dot
                 activeDot={{ 
                   r: dotRadius + 1.5, 
                   strokeWidth: 0 
@@ -249,7 +242,6 @@ export default function WeightCharts({
         </div>
 
         <div className="flex justify-center gap-2 flex-wrap">
-          {/* 6. Use handleRangeClick instead of setTimeRange */}
           <button onClick={() => handleRangeClick('1m')} className={btnClass('1m')}>1 Mo</button>
           <button onClick={() => handleRangeClick('3m')} className={btnClass('3m')}>3 Mo</button>
           <button onClick={() => handleRangeClick('6m')} className={btnClass('6m')}>6 Mo</button>
