@@ -1,5 +1,7 @@
 // In app/api/import/route.ts
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { parse } from 'csv-parse';
 import db from '@/lib/db';
