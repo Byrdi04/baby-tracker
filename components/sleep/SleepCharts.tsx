@@ -7,7 +7,6 @@ import {
 import ChartCard from '@/components/ui/ChartCard'; 
 import { useEffect } from 'react';
 import StatCard from '@/components/ui/StatCard';
-import { DAY_START_HOUR } from '@/lib/constants'; // <-- 1. Import the constant
 
 type ChartDataPoint = {
   label: string;
@@ -35,6 +34,7 @@ type Props = {
   wakeupsData: { date: number; wakeups: number }[];
   medianWakeupsLast14: number;            
   longestStretchMinutesLast14: number;
+  dayStartHour?: number;
 };
 
 const formatMinutes = (mins: number) => {
@@ -97,15 +97,17 @@ export default function SleepCharts({
   sleepProbabilityData, 
   wakeupsData,
   medianWakeupsLast14,           
-  longestStretchMinutesLast14
+  longestStretchMinutesLast14,
+  dayStartHour
 }: Props) {
     useEffect(() => {
     console.log('Wakeups Data:', wakeupsData);
   }, [wakeupsData]);
 
-  // 2. Format the time boundary label dynamically
-  const displayHour = DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR;
-  const amPm = DAY_START_HOUR >= 12 ? 'pm' : 'am';
+  // Format the time boundary label dynamically
+  const hour = dayStartHour ?? 6;
+  const displayHour = hour > 12 ? hour - 12 : hour;
+  const amPm = hour >= 12 ? 'pm' : 'am';
   const headerTimeStr = `${displayHour}.00${amPm} - ${displayHour}.00${amPm}`;
 
   const wakeupsChartData = wakeupsData.map((d) => ({

@@ -5,6 +5,7 @@ import SleepCharts from '@/components/sleep/SleepCharts';
 import SleepTimeline from '@/components/SleepTimeline'; 
 import EventList from '@/components/events/EventList';
 import SleepStats from '@/components/sleep/SleepStats';
+import { getDayStartHour, getBabyBirthday, getBabyGender } from '@/lib/settings';
 
 // Import the logic functions
 import { 
@@ -14,6 +15,10 @@ import {
 } from '@/lib/sleep-logic';
 
 export default function SleepPage() {
+  const dayStartHour = getDayStartHour();
+  const birthDate = getBabyBirthday();
+  const gender = getBabyGender();
+
   // 1. Fetch Data
   const stmt = db.prepare(`
     SELECT * FROM events 
@@ -34,8 +39,8 @@ export default function SleepPage() {
     wakeupsData
   } = processSleepStats(sleepEvents);
 
-  const timelineData = generateTimelineData(sleepEvents, nightEventIds);
-  const sleepProbabilityData = calculateSleepProbability(completedSleeps);
+  const timelineData = generateTimelineData(sleepEvents, nightEventIds, new Date(), 7, dayStartHour);
+  const sleepProbabilityData = calculateSleepProbability(completedSleeps, dayStartHour);
 
   // 3. Render UI
   return (
@@ -49,7 +54,7 @@ export default function SleepPage() {
       <SleepStats stats={stats} />
 
       {/* Timeline Section */}
-      <SleepTimeline data={timelineData} showHistoryLink={true} />
+      <SleepTimeline data={timelineData} showHistoryLink={true} dayStartHour={dayStartHour} />
 
       <SleepCharts 
         chartData={chartData} 
@@ -60,11 +65,12 @@ export default function SleepPage() {
         wakeupsData={wakeupsData}
         medianWakeupsLast14={stats.medianWakeupsLast14}
         longestStretchMinutesLast14={stats.longestStretchMinutesLast14}
+        dayStartHour={dayStartHour}
       />
 
       <section>
         <h2>All Entries</h2>
-        <EventList events={sleepEvents} /> 
+        <EventList events={sleepEvents} birthDate={birthDate} gender={gender} /> 
       </section>
 
     </main>

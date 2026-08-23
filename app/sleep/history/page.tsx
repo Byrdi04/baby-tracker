@@ -1,11 +1,14 @@
 import HistoryList from '@/components/HistoryList';
 import Link from 'next/link';
 import { fetchHistoryChunk } from '@/app/actions'; // 👈 Import the action
+import { getDayStartHour, getHistoryChunkDays } from '@/lib/settings';
 export const dynamic = "force-dynamic";
 
 export default async function SleepHistoryPage() {
   // 👈 Fetch Page 0 on the server
   const initialData = await fetchHistoryChunk('SLEEP', 0);
+  const dayStartHour = getDayStartHour();
+  const chunkDays = getHistoryChunkDays();
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
@@ -20,7 +23,7 @@ export default async function SleepHistoryPage() {
       </header>
 
       {/* 👈 Pass the data */}
-      <HistoryList type="SLEEP" initialData={initialData} />
+      <HistoryList type="SLEEP" initialData={initialData} dayStartHour={dayStartHour} chunkDays={chunkDays} />
     </main>
   );
 }

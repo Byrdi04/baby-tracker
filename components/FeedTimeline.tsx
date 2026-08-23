@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DAY_START_HOUR } from '@/lib/constants'; // <-- Added import
 
 type FeedPoint = {
   left: number;
@@ -19,9 +18,10 @@ type DayRow = {
 type Props = {
   data: DayRow[];
   showHistoryLink?: boolean;
+  dayStartHour?: number; // optional, defaults to 6
 };
 
-export default function FeedTimeline({ data, showHistoryLink = false }: Props) {
+export default function FeedTimeline({ data, showHistoryLink = false, dayStartHour = 6 }: Props) {
   const [activePoint, setActivePoint] = useState<{ dIndex: number; pIndex: number } | null>(null);
   const [currentPos, setCurrentPos] = useState<number | null>(null);
   const [todayLabel, setTodayLabel] = useState<string>('');
@@ -35,21 +35,21 @@ export default function FeedTimeline({ data, showHistoryLink = false }: Props) {
     const now = new Date();
     const checkDate = new Date();
     
-    // UPDATED: Dynamic day cutoff
-    if (checkDate.getHours() < DAY_START_HOUR) checkDate.setDate(checkDate.getDate() - 1);
+    // Dynamic day cutoff
+    if (checkDate.getHours() < dayStartHour) checkDate.setDate(checkDate.getDate() - 1);
 
     setTodayLabel(
       checkDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
     );
 
-    // UPDATED: Current pos calculations
+    // Current pos calculations
     let hours = now.getHours() + now.getMinutes() / 60;
-    if (hours < DAY_START_HOUR) hours += 24;
-    const relativeHours = hours - DAY_START_HOUR;
+    if (hours < dayStartHour) hours += 24;
+    const relativeHours = hours - dayStartHour;
     setCurrentPos((relativeHours / 24) * 100);
 
     return () => window.removeEventListener('click', handleGlobalClick);
-  }, []);
+  }, [dayStartHour]);
 
   const handlePointClick = (e: React.MouseEvent, dIndex: number, pIndex: number) => {
     e.stopPropagation();
@@ -108,8 +108,8 @@ export default function FeedTimeline({ data, showHistoryLink = false }: Props) {
   const gridMarkers = ['0%', '25%', '50%', '75%', '100%'];
 
   // Calculate AM/PM formatting dynamically for the header
-  const displayHour = DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR;
-  const amPm = DAY_START_HOUR >= 12 ? 'pm' : 'am';
+  const displayHour = dayStartHour > 12 ? dayStartHour - 12 : dayStartHour;
+  const amPm = dayStartHour >= 12 ? 'pm' : 'am';
   const headerTimeStr = `${displayHour}.00${amPm} - ${displayHour}.00${amPm}`;
 
   return (

@@ -10,20 +10,26 @@ import FeedCharts from '@/components/feed/FeedCharts';
 
 // 2. Import Logic
 import { processFeedStats, generateFeedTimeline } from '@/lib/feed-logic';
+import { getDayStartHour, getFeedDisplayLimit, getBabyBirthday, getBabyGender } from '@/lib/settings';
 
 export default function FeedPage() {
+  const dayStartHour = getDayStartHour();
+  const displayLimit = getFeedDisplayLimit();
+  const birthDate = getBabyBirthday();
+  const gender = getBabyGender();
+
   // 1. Fetch Data
   const stmt = db.prepare(`
     SELECT * FROM events 
     WHERE type = 'FEED' 
     ORDER BY startTime DESC 
-    LIMIT 100
+    LIMIT ?
   `);
-  const feedEvents = stmt.all() as any[];
+  const feedEvents = stmt.all(displayLimit) as any[];
 
   // 2. Process Logic (in Lib)
   const { stats, chartData } = processFeedStats(feedEvents);
-  const timelineData = generateFeedTimeline(feedEvents);
+  const timelineData = generateFeedTimeline(feedEvents, new Date(), 7, dayStartHour);
 
   // 3. Render UI
   return (
@@ -37,15 +43,15 @@ export default function FeedPage() {
       <FeedStats stats={stats} />
 
       {/* Timeline */}
-      <FeedTimeline data={timelineData} showHistoryLink={true} />
+      <FeedTimeline data={timelineData} showHistoryLink={true} dayStartHour={dayStartHour} />
 
       {/* Charts */}
-      <FeedCharts chartData={chartData} />
+      <FeedCharts chartData={chartData} dayStartHour={dayStartHour} />
 
       {/* List */}
       <section>
         <h2>All Entries</h2>
-        <EventList events={feedEvents} /> 
+        <EventList events={feedEvents} birthDate={birthDate} gender={gender} /> 
       </section>
 
     </main>

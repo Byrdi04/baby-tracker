@@ -30,10 +30,12 @@ type FeedRow = {
 
 type Props = {
   type: 'SLEEP' | 'FEED';
-  initialData: any; 
+  initialData: any;
+  dayStartHour?: number;
+  chunkDays?: number;
 };
 
-export default function HistoryList({ type, initialData }: Props) {
+export default function HistoryList({ type, initialData, dayStartHour = 6, chunkDays = 14 }: Props) {
   const [chunks, setChunks] = useState<any[]>([initialData]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -42,16 +44,15 @@ export default function HistoryList({ type, initialData }: Props) {
   const processedData = useMemo(() => {
     const allEvents = chunks.flatMap(c => c.events);
 
-    const DAYS_PER_CHUNK = 14;
-    const totalDays = chunks.length * DAYS_PER_CHUNK;
+    const totalDays = chunks.length * chunkDays;
 
     if (type === 'SLEEP') {
       const { nightEventIds } = processSleepStats(allEvents);
-      return generateTimelineData(allEvents, nightEventIds, new Date(), totalDays);
+      return generateTimelineData(allEvents, nightEventIds, new Date(), totalDays, dayStartHour);
     } else {
-      return generateFeedTimeline(allEvents, new Date(), totalDays);
+      return generateFeedTimeline(allEvents, new Date(), totalDays, dayStartHour);
     }
-  }, [chunks, type]);
+  }, [chunks, type, chunkDays]);
 
   const loadMore = async () => {
     setLoading(true);
@@ -74,11 +75,11 @@ export default function HistoryList({ type, initialData }: Props) {
   return (
     <div className="space-y-4">
       {type === 'SLEEP' ? (
-        // 2. Use 'as SleepRow[]' to tell TypeScript: "Trust me, this is sleep data"
-        <SleepTimeline data={processedData as SleepRow[]} />
+        // Use 'as SleepRow[]' to tell TypeScript: "Trust me, this is sleep data"
+        <SleepTimeline data={processedData as SleepRow[]} dayStartHour={dayStartHour} />
       ) : (
-        // 3. Use 'as FeedRow[]' for the feed section
-        <FeedTimeline data={processedData as FeedRow[]} />
+        // Use 'as FeedRow[]' for the feed section
+        <FeedTimeline data={processedData as FeedRow[]} dayStartHour={dayStartHour} />
       )}
 
       <div className="py-4 text-center">
@@ -89,7 +90,7 @@ export default function HistoryList({ type, initialData }: Props) {
             onClick={loadMore}
             className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
           >
-            Load previous 14 days
+            Load previous {chunkDays} days
           </button>
         )}
 

@@ -18,7 +18,15 @@ const DefaultItem = ({ event, onClick }: any) => (
   />
 );
 
-export default function EventList({ events }: { events: any[] }) {
+export default function EventList({ 
+  events, 
+  birthDate = '2025-08-07', 
+  gender = 'male' 
+}: { 
+  events: any[],
+  birthDate?: string,
+  gender?: 'male' | 'female',
+}) {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
   if (events.length === 0) {
@@ -46,7 +54,7 @@ export default function EventList({ events }: { events: any[] }) {
             return <DiaperItem key={event.id} {...commonProps} />;
           case 'WEIGHT':
             const prevWeight = events.slice(index + 1).find(e => e.type === 'WEIGHT');
-            return <WeightItem key={event.id} {...commonProps} prevEvent={prevWeight} />;
+            return <WeightItem key={event.id} {...commonProps} prevEvent={prevWeight} birthDate={birthDate} gender={gender} />;
           case 'MEDICINE':
             return <MedicineItem key={event.id} {...commonProps} />;
           case 'NOTE':

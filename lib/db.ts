@@ -20,7 +20,7 @@ db.pragma('journal_mode = WAL');
 
 console.log(`📂 Database active at: ${dbPath}`);
 
-// 4. Ensure Table Exists (NO CHANGES NEEDED HERE)
+// 4. Ensure Tables Exist
 db.prepare(`
   CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +30,13 @@ db.prepare(`
     note TEXT,
     data TEXT DEFAULT '{}',
     createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
   )
 `).run();
 

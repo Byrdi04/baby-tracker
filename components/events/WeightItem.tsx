@@ -1,14 +1,26 @@
 'use client';
 
 import EventItemShell from './EventItemShell';
-import { calculateInterpolatedPercentile } from '@/lib/growthUtils'; 
-import { STATIC_GROWTH_DATA } from '@/data/growth_curve';
+import { calculateInterpolatedPercentile } from '@/lib/growthUtils';
+import { toPercentilePoints } from '@/lib/growthTables';
 
 // Helper for the date format (e.g. "15 Jan")
 const formatDate = (dateStr: string) => 
   new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-export default function WeightItem({ event, prevEvent, onClick }: { event: any, prevEvent?: any, onClick: () => void }) {
+export default function WeightItem({ 
+  event, 
+  prevEvent, 
+  onClick, 
+  birthDate, 
+  gender 
+}: { 
+  event: any, 
+  prevEvent?: any, 
+  onClick: () => void,
+  birthDate: string,
+  gender: 'male' | 'female',
+}) {
   const data = JSON.parse(event.data || '{}');
   const weight = parseFloat(data.amount || 0);
 
@@ -27,8 +39,9 @@ export default function WeightItem({ event, prevEvent, onClick }: { event: any, 
     title = formatDate(event.startTime);
   }
 
-  // 2. Percentile
-  const percentile = calculateInterpolatedPercentile(weight, event.startTime, STATIC_GROWTH_DATA) || '--%';
+  // 2. Percentile (using WHO data from settings — passed as props)
+  const growthData = toPercentilePoints(gender, birthDate);
+  const percentile = calculateInterpolatedPercentile(weight, event.startTime, growthData) || '--%';
 
   // 3. Rate Calculation with Color Logic
   let rateDisplay = null; // Initialized as null instead of empty string

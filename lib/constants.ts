@@ -1,5 +1,5 @@
 // lib/constants.ts
+// ⚠️ DEPRECATED — use lib/settings.ts for runtime values.
+// Re-exported here for backward compatibility.
 
-// The hour the logical day starts (0-23). 
-// 6 = 6:00 AM.
-export const DAY_START_HOUR = 6; 
+export { getDayStartHour } from './settings';

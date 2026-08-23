@@ -3,8 +3,9 @@
 
 import db from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { getHistoryChunkDays } from '@/lib/settings';
 
-const DAYS_PER_PAGE = 14;
+let DAYS_PER_PAGE = getHistoryChunkDays();
 
 export async function logEvent(type: string) {
   const stmt = db.prepare(`

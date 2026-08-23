@@ -1,13 +1,17 @@
 import db from '@/lib/db';
 import QuickButtons from '@/components/QuickButtons';
 import EventList from '@/components/events/EventList';
+import { getEventsDisplayLimit, getBabyBirthday, getBabyGender } from '@/lib/settings';
 export const dynamic = "force-dynamic";
 
 export default function Home() {
+  const displayLimit = getEventsDisplayLimit();
+  const birthDate = getBabyBirthday();
+  const gender = getBabyGender();
   // 1. FETCH DATA (Server Side)
   // We disable caching for this specific request so the list is always fresh
-  const stmt = db.prepare('SELECT * FROM events ORDER BY startTime DESC LIMIT 1000');
-  const events = stmt.all() as any[]; // pass as any to avoid strict type issues between server/client files
+  const stmt = db.prepare('SELECT * FROM events ORDER BY startTime DESC LIMIT ?');
+  const events = stmt.all(displayLimit) as any[]; // pass as any to avoid strict type issues between server/client files
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
@@ -21,7 +25,7 @@ export default function Home() {
         </h2>
         
         {/* Pass the data to the Client Component */}
-        <EventList events={events} />
+        <EventList events={events} birthDate={birthDate} gender={gender} />
         
       </section>
     </main>

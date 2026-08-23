@@ -49,3 +49,8 @@ baby-tracker.db-shm
 baby-tracker.db-wal
 *.xlsx
 *.csv
+
+#harness specific
+.cache/
+.local/
+.npm/

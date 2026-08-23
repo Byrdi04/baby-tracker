@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import db from '@/lib/db';
+import { getVitaminResetHour } from '@/lib/settings';
 
 export async function POST(request: Request) {
   try {
@@ -91,9 +92,9 @@ export async function GET() {
     LIMIT 1
   `).get() as { endTime: string } | undefined;
 
-  // 3. Check Medicine Status (Resetting at 6 AM)
+  // 3. Check Medicine Status (Resetting based on settings)
   const now = new Date();
-  const RESET_HOUR = 6;
+  const RESET_HOUR = getVitaminResetHour();
   
   let cutoffDate = new Date(now);
   if (now.getHours() < RESET_HOUR) {

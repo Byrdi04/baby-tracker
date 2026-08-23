@@ -5,6 +5,7 @@ import DiaperCharts from './DiaperCharts';
 import StatCard from '@/components/ui/StatCard';
 import ChartCard from '@/components/ui/ChartCard'; 
 import EventList from '@/components/events/EventList';
+import { getEventsDisplayLimit, getBabyBirthday, getBabyGender } from '@/lib/settings';
 
 // Helper: Format time (14:30)
 const formatTime = (dateStr: string) => {
@@ -39,14 +40,17 @@ const getWeekKey = (dateStr: string): string => {
 };
 
 export default function DiaperPage() {
-  // 1. Fetch more history (Increased to 1000 for better long-term averages)
+  // 1. Fetch more history
+  const displayLimit = getEventsDisplayLimit();
   const stmt = db.prepare(`
     SELECT * FROM events 
     WHERE type = 'DIAPER' 
     ORDER BY startTime DESC 
-    LIMIT 1000
+    LIMIT ?
   `);
-  const diaperEvents = stmt.all() as any[];
+  const diaperEvents = stmt.all(displayLimit) as any[];
+  const birthDate = getBabyBirthday();
+  const gender = getBabyGender();
 
   // ============================================================
   // STATISTICS CALCULATIONS
@@ -163,7 +167,7 @@ export default function DiaperPage() {
       {/* Diaper List */}
       <section>
         <h2>All Entries</h2>
-        <EventList events={diaperEvents} /> 
+        <EventList events={diaperEvents} birthDate={birthDate} gender={gender} /> 
       </section>
 
     </main>

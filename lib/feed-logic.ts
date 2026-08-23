@@ -1,5 +1,4 @@
 // lib/feed-logic.ts
-import { DAY_START_HOUR } from './constants';
 
 // ================= HELPER FUNCTIONS =================
 export const formatTime = (dateStr: string) => {
@@ -11,9 +10,9 @@ export const formatTime = (dateStr: string) => {
 };
 
 // UPDATED: Now uses DAY_START_HOUR so early morning feeds count towards the previous logical day
-export const getDateKey = (dateStr: string): string => {
+export const getDateKey = (dateStr: string, dayStartHour: number = 6): string => {
   const date = new Date(dateStr);
-  if (date.getHours() < DAY_START_HOUR) {
+  if (date.getHours() < dayStartHour) {
     date.setDate(date.getDate() - 1);
   }
   const year = date.getFullYear();
@@ -109,15 +108,16 @@ export function processFeedStats(feedEvents: any[]) {
 export function generateFeedTimeline(
   feedEvents: any[],
   referenceDate: Date = new Date(),
-  daysToGenerate: number = 7
+  daysToGenerate: number = 7,
+  dayStartHour: number = 6
 ) {
   const timelineData = [];
   const current = new Date(referenceDate);
 
-  // UPDATED: Use dynamic DAY_START_HOUR
+  // Use dynamic day start
   if (
     new Date().toDateString() === current.toDateString() &&
-    current.getHours() < DAY_START_HOUR
+    current.getHours() < dayStartHour
   ) {
     current.setDate(current.getDate() - 1);
   }
@@ -127,7 +127,7 @@ export function generateFeedTimeline(
     d.setDate(d.getDate() - i);
 
     const cycleStart = new Date(d);
-    cycleStart.setHours(DAY_START_HOUR, 0, 0, 0); // UPDATED
+    cycleStart.setHours(dayStartHour, 0, 0, 0);
 
     const cycleEnd = new Date(cycleStart);
     cycleEnd.setDate(cycleEnd.getDate() + 1);
@@ -143,9 +143,9 @@ export function generateFeedTimeline(
 
         // UPDATED: Calculate percentage based on dynamic day start
         let hours = start.getHours() + start.getMinutes() / 60;
-        if (hours < DAY_START_HOUR) hours += 24;
+        if (hours < dayStartHour) hours += 24;
 
-        const relativeHours = hours - DAY_START_HOUR;
+        const relativeHours = hours - dayStartHour;
         const left = (relativeHours / 24) * 100;
 
         const rawNote: string = e.note ?? '';

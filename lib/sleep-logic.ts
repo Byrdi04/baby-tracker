@@ -1,5 +1,4 @@
 // lib/sleep-logic.ts
-import { DAY_START_HOUR } from './constants';
 
 // ================= HELPER FUNCTIONS =================
 export const formatTime = (dateStr: string) => {
@@ -41,10 +40,10 @@ export const getMedian = (numbers: number[]): number => {
   return sorted[mid];
 };
 
-export const getDateKey = (dateStr: string): string => {
+export const getDateKey = (dateStr: string, dayStartHour: number = 6): string => {
   const date = new Date(dateStr);
   // Standard cutoff (Used for Night Sleep logic and generic grouping)
-  if (date.getHours() < DAY_START_HOUR) {
+  if (date.getHours() < dayStartHour) {
     date.setDate(date.getDate() - 1);
   }
   const year = date.getFullYear();
@@ -443,14 +442,15 @@ export function generateTimelineData(
   sleepEvents: any[], 
   nightEventIds: Set<number>,
   referenceDate: Date = new Date(), // Default to Today
-  daysToGenerate: number = 7        // Default to 7 days
+  daysToGenerate: number = 7,        // Default to 7 days
+  dayStartHour: number = 6           // Day start hour (e.g. 6 for 6 AM)
 ) {
   const timelineData = [];
   
   // Clone date to avoid mutating the original
   const current = new Date(referenceDate);
   
-  if (new Date().toDateString() === current.toDateString() && current.getHours() < DAY_START_HOUR) {
+  if (new Date().toDateString() === current.toDateString() && current.getHours() < dayStartHour) {
     current.setDate(current.getDate() - 1);
   }
   
@@ -458,9 +458,9 @@ export function generateTimelineData(
     const d = new Date(current);
     d.setDate(d.getDate() - i);
     
-    // Window: DAY_START_HOUR D to DAY_START_HOUR D+1
+    // Window: day start D to day start D+1
     const rowStart = new Date(d);
-    rowStart.setHours(DAY_START_HOUR, 0, 0, 0);
+    rowStart.setHours(dayStartHour, 0, 0, 0);
     
     const rowEnd = new Date(rowStart);
     rowEnd.setDate(rowEnd.getDate() + 1); 
@@ -510,15 +510,15 @@ export function generateTimelineData(
   return timelineData;
 }
 
-export function calculateSleepProbability(completedSleeps: any[]) {
+export function calculateSleepProbability(completedSleeps: any[], dayStartHour: number = 6) {
   // 144 slots = 24 hours * 6 (10‑minute intervals)
   const timeSlots = new Array(144).fill(0);
 
   // Offset in minutes based on configurable day start
-  const offsetMins = DAY_START_HOUR * 60;
+  const offsetMins = dayStartHour * 60;
 
   // 1️⃣ Get today's logical key (based on DAY_START_HOUR)
-  const todayKey = getDateKey(new Date().toISOString());
+  const todayKey = getDateKey(new Date().toISOString(), dayStartHour);
 
   // 2️⃣ Remove sleeps that belong to the current unfinished logical day
   const historicalSleeps = completedSleeps.filter(

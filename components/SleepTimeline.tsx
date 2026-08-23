@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DAY_START_HOUR } from '@/lib/constants';
 
 type SleepBlock = {
   left: number;
@@ -17,13 +16,14 @@ type SleepBlock = {
 
 type DayRow = {
   date: string;
-  rawDate?: string; // 👈 1. Added rawDate to access the full date object
+  rawDate?: string;
   blocks: SleepBlock[];
 };
 
 type Props = {
   data: DayRow[];
   showHistoryLink?: boolean;
+  dayStartHour?: number;
 };
 
 // 2. Helper to get "August 2024" from ISO string
@@ -32,7 +32,7 @@ const getMonthHeader = (dateStr?: string) => {
   return new Date(dateStr).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 };
 
-export default function SleepTimeline({ data, showHistoryLink = false }: Props) {
+export default function SleepTimeline({ data, showHistoryLink = false, dayStartHour = 6 }: Props) {
   const [activeBlock, setActiveBlock] = useState<{ dIndex: number; bIndex: number } | null>(null);
   const [currentPos, setCurrentPos] = useState<number | null>(null);
   const [todayLabel, setTodayLabel] = useState<string>('');
@@ -45,17 +45,17 @@ export default function SleepTimeline({ data, showHistoryLink = false }: Props) 
     const checkDate = new Date();
     
     // Use the dynamic logic for consistency
-    if (checkDate.getHours() < DAY_START_HOUR) checkDate.setDate(checkDate.getDate() - 1);
+    if (checkDate.getHours() < dayStartHour) checkDate.setDate(checkDate.getDate() - 1);
     
     setTodayLabel(checkDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }));
 
     let hours = now.getHours() + (now.getMinutes() / 60);
-    if (hours < DAY_START_HOUR) hours += 24; 
-    const relativeHours = hours - DAY_START_HOUR;
+    if (hours < dayStartHour) hours += 24; 
+    const relativeHours = hours - dayStartHour;
     setCurrentPos((relativeHours / 24) * 100);
 
     return () => window.removeEventListener('click', handleGlobalClick);
-  }, []);
+  }, [dayStartHour]);
 
   const gridMarkers = ['0%', '25%', '50%', '75%', '100%'];
 
@@ -92,7 +92,7 @@ export default function SleepTimeline({ data, showHistoryLink = false }: Props) 
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
           Sleep Schedule <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-            ({DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR}{DAY_START_HOUR >= 12 ? 'pm' : 'am'} - {DAY_START_HOUR > 12 ? DAY_START_HOUR - 12 : DAY_START_HOUR}{DAY_START_HOUR >= 12 ? 'pm' : 'am'})
+            ({dayStartHour > 12 ? dayStartHour - 12 : dayStartHour}{dayStartHour >= 12 ? 'pm' : 'am'} - {dayStartHour > 12 ? dayStartHour - 12 : dayStartHour}{dayStartHour >= 12 ? 'pm' : 'am'})
           </span>
         </h3>
         
