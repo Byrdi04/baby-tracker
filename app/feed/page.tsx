@@ -51,7 +51,7 @@ export default function FeedPage() {
       {/* List */}
       <section>
         <h2>All Entries</h2>
-        <EventList events={feedEvents} birthDate={birthDate} gender={gender} /> 
+        <EventList events={feedEvents} birthDate={birthDate} gender={gender} correctedOffsetMs={0} /> 
       </section>
 
     </main>

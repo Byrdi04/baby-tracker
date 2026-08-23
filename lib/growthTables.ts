@@ -105,23 +105,32 @@ export function monthToDate(month: number, birthDate: string): string {
   return target.toISOString().split('T')[0];
 }
 
-/** Convert the growth table to the format expected by calculateInterpolatedPercentile. */
+/** Convert the growth table to the format expected by calculateInterpolatedPercentile.
+ * When `shiftMs` is provided, adds it to each month-derived timestamp
+ * (used for corrected-age charts). */
 export function toPercentilePoints(
   gender: 'male' | 'female',
-  birthDate: string
+  birthDate: string,
+  shiftMs = 0
 ): GrowthPointDate[] {
   const table = getGrowthTable(gender);
-  return table.map(point => ({
-    date: monthToDate(point.month, birthDate),
-    p01: point.p01,
-    p1: point.p1,
-    p3: point.p3,
-    p5: point.p5,
-    p10: point.p10,
-    p15: point.p15,
-    p25: point.p25,
-    p50: point.p50,
-    p75: point.p75,
-    p85: point.p85,
-  }));
+  return table.map(point => {
+    const birth = new Date(birthDate + 'T00:00:00');
+    const target = new Date(birth);
+    target.setMonth(target.getMonth() + point.month);
+    const shifted = new Date(target.getTime() + shiftMs);
+    return {
+      date: shifted.toISOString().split('T')[0],
+      p01: point.p01,
+      p1: point.p1,
+      p3: point.p3,
+      p5: point.p5,
+      p10: point.p10,
+      p15: point.p15,
+      p25: point.p25,
+      p50: point.p50,
+      p75: point.p75,
+      p85: point.p85,
+    };
+  });
 }

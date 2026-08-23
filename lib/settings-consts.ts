@@ -12,7 +12,9 @@ export type SettingsKey =
   | 'feedDisplayLimit'
   | 'historyChunkDays'
   | 'timezone'
-  | 'vitaminReminderTime';
+  | 'vitaminReminderTime'
+  | 'prematurityActive'
+  | 'gestationalWeeks';
 
 export const DEFAULTS: Record<SettingsKey, string> = {
   dayStartHour: '6',
@@ -25,4 +27,6 @@ export const DEFAULTS: Record<SettingsKey, string> = {
   historyChunkDays: '14',
   timezone: 'Europe/Copenhagen',
   vitaminReminderTime: '',
+  prematurityActive: 'false',
+  gestationalWeeks: '',
 };

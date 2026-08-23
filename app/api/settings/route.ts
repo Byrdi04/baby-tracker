@@ -32,6 +32,8 @@ export async function POST(request: Request) {
       'historyChunkDays',
       'timezone',
       'vitaminReminderTime',
+      'prematurityActive',
+      'gestationalWeeks',
     ]);
 
     if (!allowedKeys.has(key)) {

@@ -167,7 +167,7 @@ export default function DiaperPage() {
       {/* Diaper List */}
       <section>
         <h2>All Entries</h2>
-        <EventList events={diaperEvents} birthDate={birthDate} gender={gender} /> 
+        <EventList events={diaperEvents} birthDate={birthDate} gender={gender} correctedOffsetMs={0} /> 
       </section>
 
     </main>

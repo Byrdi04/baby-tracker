@@ -106,3 +106,33 @@ export function getTimezone(): string {
 export function getVitaminReminderTime(): string {
   return get('vitaminReminderTime');
 }
+
+/** Whether prematurity/adjusted-age tracking is enabled. */
+export function isPrematurityActive(): boolean {
+  return get('prematurityActive') === 'true';
+}
+
+/** Parse gestational age: "32" or "32+3" → { weeks: 32, days: 3 }.
+ * Returns null when prematurityActive is false or value is empty/invalid. */
+export function getGestationalAge(): { weeks: number; days: number } | null {
+  if (!isPrematurityActive()) return null;
+  const raw = get('gestationalWeeks').trim();
+  if (!raw) return null;
+  const [ws, ds] = raw.split('+');
+  const weeks = parseInt(ws!, 10);
+  const days = ds ? parseInt(ds, 10) : 0;
+  if (!Number.isFinite(weeks) || weeks < 22 || weeks > 37) return null;
+  if (!Number.isFinite(days) || days < 0 || days > 6) return null;
+  return { weeks, days: days % 7 };
+}
+
+/** Return the due-date offset in milliseconds (40 weeks − gestational age).
+ * Returns 0 when prematurityActive is false. */
+export function getDueDateOffsetMs(): number {
+  const ga = getGestationalAge();
+  if (!ga) return 0;
+  const missingWeeks = 40 - ga.weeks;
+  const missingDays = 7 - ga.days;
+  const totalDays = missingWeeks * 7 + missingDays;
+  return totalDays * 24 * 60 * 60 * 1000;
+}

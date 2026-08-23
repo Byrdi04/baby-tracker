@@ -5,28 +5,29 @@ import { calculateInterpolatedPercentile } from '@/lib/growthUtils';
 import { toPercentilePoints } from '@/lib/growthTables';
 
 // Helper for the date format (e.g. "15 Jan")
-const formatDate = (dateStr: string) => 
+const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-export default function WeightItem({ 
-  event, 
-  prevEvent, 
-  onClick, 
-  birthDate, 
-  gender 
-}: { 
-  event: any, 
-  prevEvent?: any, 
-  onClick: () => void,
-  birthDate: string,
-  gender: 'male' | 'female',
+export default function WeightItem({
+  event,
+  prevEvent,
+  onClick,
+  birthDate,
+  gender,
+  correctedOffsetMs,
+}: {
+  event: any;
+  prevEvent?: any;
+  onClick: () => void;
+  birthDate: string;
+  gender: 'male' | 'female';
+  correctedOffsetMs: number;
 }) {
   const data = JSON.parse(event.data || '{}');
   const weight = parseFloat(data.amount || 0);
 
   // 1. Calculate Days Ago
   const daysAgo = Math.floor((Date.now() - new Date(event.startTime).getTime()) / (1000 * 60 * 60 * 24));
-  // 👇 UPDATED TITLE LOGIC
   let title = '';
   if (daysAgo === 0) {
     title = 'Today';
@@ -35,32 +36,37 @@ export default function WeightItem({
   } else if (daysAgo <= 7) {
     title = `${daysAgo} days ago`;
   } else {
-    // If older than 7 days, show the actual date (e.g. "14 Feb")
     title = formatDate(event.startTime);
   }
 
-  // 2. Percentile (using WHO data from settings — passed as props)
+  // 2. Actual age percentile
   const growthData = toPercentilePoints(gender, birthDate);
   const percentile = calculateInterpolatedPercentile(weight, event.startTime, growthData) || '--%';
 
-  // 3. Rate Calculation with Color Logic
-  let rateDisplay = null; // Initialized as null instead of empty string
+  // 3. Corrected age percentile (if offset is non-zero)
+  let correctedPercentile: string | null = null;
+  if (correctedOffsetMs > 0) {
+    const correctedTime = new Date(new Date(event.startTime).getTime() + correctedOffsetMs).toISOString();
+    const correctedGrowthData = toPercentilePoints(gender, birthDate, correctedOffsetMs);
+    correctedPercentile = calculateInterpolatedPercentile(weight, correctedTime, correctedGrowthData);
+  }
+
+  // 4. Rate Calculation with Color Logic
+  let rateDisplay = null;
 
   if (prevEvent) {
     const prevWeight = parseFloat(JSON.parse(prevEvent.data || '{}').amount || 0);
     const diffG = (weight - prevWeight) * 1000;
     const diffDays = (new Date(event.startTime).getTime() - new Date(prevEvent.startTime).getTime()) / (1000 * 60 * 60 * 24);
-    
+
     if (diffDays > 0) {
       const rate = Math.round(diffG / diffDays);
       const text = `(${diffG > 0 ? '+' : ''}${rate} g/day)`;
-      
-      // 👇 Determine Color
-      const colorClass = rate >= 0 
-        ? 'text-green-700 dark:text-green-400' 
+
+      const colorClass = rate >= 0
+        ? 'text-green-700 dark:text-green-400'
         : 'text-red-700 dark:text-red-400';
 
-      // 👇 Create Colored Span
       rateDisplay = (
         <span className={colorClass}>
           {text}
@@ -68,6 +74,11 @@ export default function WeightItem({
       );
     }
   }
+
+  // Build percentile display
+  const percentileDisplay = correctedPercentile
+    ? `${percentile} (corr. ${correctedPercentile})`
+    : percentile;
 
   return (
     <EventItemShell
@@ -82,7 +93,7 @@ export default function WeightItem({
           {rateDisplay}
         </div>
       }
-      rightBottom={`${percentile}`}
+      rightBottom={percentileDisplay}
     />
   );
 }

@@ -70,7 +70,7 @@ export default function SleepPage() {
 
       <section>
         <h2>All Entries</h2>
-        <EventList events={sleepEvents} birthDate={birthDate} gender={gender} /> 
+        <EventList events={sleepEvents} birthDate={birthDate} gender={gender} correctedOffsetMs={0} /> 
       </section>
 
     </main>

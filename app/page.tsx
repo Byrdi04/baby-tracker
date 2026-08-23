@@ -25,7 +25,7 @@ export default function Home() {
         </h2>
         
         {/* Pass the data to the Client Component */}
-        <EventList events={events} birthDate={birthDate} gender={gender} />
+        <EventList events={events} birthDate={birthDate} gender={gender} correctedOffsetMs={0} />
         
       </section>
     </main>

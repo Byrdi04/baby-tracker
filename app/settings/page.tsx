@@ -13,7 +13,9 @@ type SettingsKey =
   | "feedDisplayLimit"
   | "historyChunkDays"
   | "timezone"
-  | "vitaminReminderTime";
+  | "vitaminReminderTime"
+  | "prematurityActive"
+  | "gestationalWeeks";
 
 const ALL_KEYS: SettingsKey[] = [
   "dayStartHour",
@@ -26,6 +28,8 @@ const ALL_KEYS: SettingsKey[] = [
   "historyChunkDays",
   "timezone",
   "vitaminReminderTime",
+  "prematurityActive",
+  "gestationalWeeks",
 ];
 
 const DEFAULTS: Record<SettingsKey, string> = {
@@ -39,12 +43,14 @@ const DEFAULTS: Record<SettingsKey, string> = {
   historyChunkDays: "14",
   timezone: "Europe/Copenhagen",
   vitaminReminderTime: "",
+  prematurityActive: "false",
+  gestationalWeeks: "",
 };
 
 const SECTION_ORDER: { title: string; keys: SettingsKey[] }[] = [
   {
     title: "Baby Profile",
-    keys: ["babyName", "babyBirthday", "babyGender"],
+    keys: ["babyName", "babyBirthday", "babyGender", "prematurityActive", "gestationalWeeks"],
   },
   {
     title: "Daily Schedule",
@@ -71,6 +77,8 @@ const LABELS: Record<SettingsKey, string> = {
   historyChunkDays: "History pagination (days)",
   timezone: "Timezone",
   vitaminReminderTime: "Vitamin reminder (HH:MM)",
+  prematurityActive: "Prematurity",
+  gestationalWeeks: "Gestational age at birth",
 };
 
 export default function SettingsPage() {
@@ -202,6 +210,89 @@ export default function SettingsPage() {
             }
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm"
           />
+        </div>
+      );
+    }
+
+    // Toggle: prematurityActive
+    if (key === "prematurityActive") {
+      return (
+        <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {label}
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              The child was born before week 37 of pregnancy.
+            </p>
+          </div>
+          <button
+            onClick={() => save(key, val === "true" ? "false" : "true")}
+            disabled={isSaving}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              val === "true"
+                ? "bg-indigo-600"
+                : "bg-gray-300 dark:bg-gray-600"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                val === "true" ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+      );
+    }
+
+    // Gestational weeks input: show as "W+D" format
+    if (key === "gestationalWeeks") {
+      const isActive = settings.prematurityActive === "true";
+      if (!isActive) return null; // Hidden when prematurity is off
+      // Parse current value "32" or "32+3"
+      const [ws, ds] = (val || "").split('+');
+      const weeks = parseInt(ws || '0', 10) || 0;
+      const days = parseInt(ds || '0', 10) || 0;
+      const handleWeeksChange = (v: string) => {
+        const w = Math.min(36, Math.max(22, parseInt(v, 10) || 0));
+        save(key, `${w}+${days}`);
+      };
+      const handleDaysChange = (v: string) => {
+        const d = Math.min(6, Math.max(0, parseInt(v, 10) || 0));
+        save(key, `${weeks}+${d}`);
+      };
+      return (
+        <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 ml-4">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {label}
+          </label>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={22}
+                max={36}
+                value={weeks}
+                onChange={(e) => handleWeeksChange(e.target.value)}
+                disabled={isSaving}
+                className="w-14 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm text-center"
+              />
+              <span className="text-sm text-gray-500 dark:text-gray-400">w</span>
+            </div>
+            <span className="text-gray-400">+</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={0}
+                max={6}
+                value={days}
+                onChange={(e) => handleDaysChange(e.target.value)}
+                disabled={isSaving}
+                className="w-12 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm text-center"
+              />
+              <span className="text-sm text-gray-500 dark:text-gray-400">d</span>
+            </div>
+          </div>
         </div>
       );
     }

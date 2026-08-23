@@ -50,7 +50,11 @@ baby-tracker.db-wal
 *.xlsx
 *.csv
 
+<<<<<<< HEAD
 #harness specific
+=======
+#harnes
+>>>>>>> a528e25 (fix: settings feature bugfix (accidentally made on main))
 .cache/
 .local/
 .npm/

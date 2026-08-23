@@ -1,7 +1,7 @@
 // components/ui/StatCard.tsx
 import { ReactNode } from 'react';
 
-type ColorVariant = 'indigo' | 'blue' | 'purple' | 'fuchsia' | 'green' | 'yellow' | 'orange' | 'violet' | 'red' | 'amber' | 'emerald' | 'sky' | 'cyan';
+type ColorVariant = 'indigo' | 'blue' | 'purple' | 'fuchsia' | 'green' | 'yellow' | 'orange' | 'violet' | 'red' | 'amber' | 'emerald' | 'sky' | 'cyan' | 'gray';
 
 interface StatCardProps {
   label: string;
@@ -23,6 +23,7 @@ const colorStyles: Record<ColorVariant, { bg: string; text: string; label: strin
   cyan:    { bg: 'bg-cyan-100 dark:bg-cyan-900',      text: 'text-cyan-900 dark:text-cyan-200',    label: 'text-cyan-900 dark:text-cyan-200' },
   red:    { bg: 'bg-red-200 dark:bg-red-900',      text: 'text-red-900 dark:text-red-200',    label: 'text-red-900 dark:text-red-200' },
   sky:    { bg: 'bg-sky-200 dark:bg-sky-900',      text: 'text-sky-900 dark:text-sky-200',    label: 'text-sky-900 dark:text-sky-200' },
+  gray:   { bg: 'bg-gray-200 dark:bg-gray-800',    text: 'text-gray-900 dark:text-gray-200',  label: 'text-gray-900 dark:text-gray-200' },
   emerald:    { bg: 'bg-emerald-200 dark:bg-emerald-900',      text: 'text-emerald-900 dark:text-emerald-200',    label: 'text-emerald-900 dark:text-emerald-200' },
 };
 
