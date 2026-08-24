@@ -46,9 +46,8 @@ export default function WeightItem({
   // 3. Corrected age percentile (if offset is non-zero)
   let correctedPercentile: string | null = null;
   if (correctedOffsetMs > 0) {
-    const correctedTime = new Date(new Date(event.startTime).getTime() + correctedOffsetMs).toISOString();
     const correctedGrowthData = toPercentilePoints(gender, birthDate, correctedOffsetMs);
-    correctedPercentile = calculateInterpolatedPercentile(weight, correctedTime, correctedGrowthData);
+    correctedPercentile = calculateInterpolatedPercentile(weight, event.startTime, correctedGrowthData);
   }
 
   // 4. Rate Calculation with Color Logic

@@ -56,7 +56,7 @@ export default function WeightPage() {
     if (prematurityActive && offsetMs > 0) {
       const correctedVal = calculateInterpolatedPercentile(
         latestWeight,
-        new Date(new Date(latestEvent.startTime).getTime() + offsetMs).toISOString(),
+        latestEvent.startTime, // unshifted — correctedGrowthData already accounts for the offset
         correctedGrowthData
       );
       if (correctedVal) correctedPercentileStr = correctedVal;
@@ -117,10 +117,9 @@ export default function WeightPage() {
     // Corrected age percentile (if prematurity is active)
     let correctedPercentile: string | null = null;
     if (prematurityActive && offsetMs > 0) {
-      const correctedTime = new Date(eventTime + offsetMs).toISOString();
       correctedPercentile = calculateInterpolatedPercentile(
         weight,
-        correctedTime,
+        event.startTime, // unshifted — correctedGrowthData is already shifted
         correctedGrowthData
       );
     }

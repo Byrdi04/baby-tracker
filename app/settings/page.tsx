@@ -85,6 +85,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<SettingsKey, string>>(
     DEFAULTS as Record<SettingsKey, string>
   );
+  // Drafts for text/number inputs (local state until blur/enter)
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<SettingsKey | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -123,6 +125,7 @@ export default function SettingsPage() {
     try {
       await fetch("/api/settings", { method: "DELETE" });
       setSettings(DEFAULTS as Record<SettingsKey, string>);
+      setDrafts({});
       showToast("All settings reset");
     } catch {
       showToast("Reset failed");
@@ -135,12 +138,39 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 1500);
   };
 
+  // ── Input helper: save on blur, update draft onChange ───────────
+  const inputChange = (key: SettingsKey, value: string) => {
+    setDrafts((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const inputBlur = (key: SettingsKey) => {
+    const draft = drafts[key];
+    if (draft !== undefined && draft !== settings[key]) {
+      save(key, draft);
+    } else {
+      // Clear draft if unchanged
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const inputKeyDown = (key: SettingsKey, e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
   // ── Render a row ────────────────────────────────────────────────
   const renderRow = (key: SettingsKey) => {
     const label = LABELS[key];
-    const val = settings[key];
+    // Use draft if available, otherwise committed value
+    const val = key in drafts ? drafts[key] : settings[key];
     const isSaving = saving === key;
 
+    // ── babyGender: select (save immediately) ─────────────────────
     if (key === "babyGender") {
       return (
         <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
@@ -160,6 +190,7 @@ export default function SettingsPage() {
       );
     }
 
+    // ── babyBirthday: date input ──────────────────────────────────
     if (key === "babyBirthday") {
       return (
         <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
@@ -169,7 +200,9 @@ export default function SettingsPage() {
           <input
             type="date"
             value={val}
-            onChange={(e) => save(key, e.target.value)}
+            onChange={(e) => inputChange(key, e.target.value)}
+            onBlur={() => inputBlur(key)}
+            onKeyDown={(e) => inputKeyDown(key, e)}
             disabled={isSaving}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm"
           />
@@ -177,6 +210,7 @@ export default function SettingsPage() {
       );
     }
 
+    // ── vitaminReminderTime: time input ───────────────────────────
     if (key === "vitaminReminderTime") {
       return (
         <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
@@ -186,7 +220,9 @@ export default function SettingsPage() {
           <input
             type="time"
             value={val}
-            onChange={(e) => save(key, e.target.value)}
+            onChange={(e) => inputChange(key, e.target.value)}
+            onBlur={() => inputBlur(key)}
+            onKeyDown={(e) => inputKeyDown(key, e)}
             disabled={isSaving}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm"
           />
@@ -194,6 +230,7 @@ export default function SettingsPage() {
       );
     }
 
+    // ── babyName, timezone: text input ────────────────────────────
     if (key === "babyName" || key === "timezone") {
       return (
         <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
@@ -203,7 +240,9 @@ export default function SettingsPage() {
           <input
             type="text"
             value={val}
-            onChange={(e) => save(key, e.target.value)}
+            onChange={(e) => inputChange(key, e.target.value)}
+            onBlur={() => inputBlur(key)}
+            onKeyDown={(e) => inputKeyDown(key, e)}
             disabled={isSaving}
             placeholder={
               key === "timezone" ? "e.g. Europe/Copenhagen" : ""
@@ -214,7 +253,7 @@ export default function SettingsPage() {
       );
     }
 
-    // Toggle: prematurityActive
+    // ── prematurityActive: toggle ─────────────────────────────────
     if (key === "prematurityActive") {
       return (
         <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
@@ -245,22 +284,37 @@ export default function SettingsPage() {
       );
     }
 
-    // Gestational weeks input: show as "W+D" format
+    // ── gestationalWeeks: "W+D" inputs (save on blur) ─────────────
     if (key === "gestationalWeeks") {
       const isActive = settings.prematurityActive === "true";
-      if (!isActive) return null; // Hidden when prematurity is off
-      // Parse current value "32" or "32+3"
+      if (!isActive) return null;
       const [ws, ds] = (val || "").split('+');
       const weeks = parseInt(ws || '0', 10) || 0;
       const days = parseInt(ds || '0', 10) || 0;
+
       const handleWeeksChange = (v: string) => {
         const w = Math.min(36, Math.max(22, parseInt(v, 10) || 0));
-        save(key, `${w}+${days}`);
+        const newVal = `${w}+${days}`;
+        setDrafts((prev) => ({ ...prev, [key]: newVal }));
       };
       const handleDaysChange = (v: string) => {
         const d = Math.min(6, Math.max(0, parseInt(v, 10) || 0));
-        save(key, `${weeks}+${d}`);
+        const newVal = `${weeks}+${d}`;
+        setDrafts((prev) => ({ ...prev, [key]: newVal }));
       };
+      const handleBlur = () => {
+        const draft = drafts[key];
+        if (draft !== undefined && draft !== settings[key]) {
+          save(key, draft);
+        } else {
+          setDrafts((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+        }
+      };
+
       return (
         <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0 ml-4">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -274,6 +328,8 @@ export default function SettingsPage() {
                 max={36}
                 value={weeks}
                 onChange={(e) => handleWeeksChange(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={(e) => e.key === "Enter" && handleBlur()}
                 disabled={isSaving}
                 className="w-14 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm text-center"
               />
@@ -287,6 +343,8 @@ export default function SettingsPage() {
                 max={6}
                 value={days}
                 onChange={(e) => handleDaysChange(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={(e) => e.key === "Enter" && handleBlur()}
                 disabled={isSaving}
                 className="w-12 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm text-center"
               />
@@ -297,7 +355,7 @@ export default function SettingsPage() {
       );
     }
 
-    // Number inputs: dayStartHour, vitaminResetHour, limits, chunk days
+    // ── Number inputs: save on blur ───────────────────────────────
     return (
       <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -306,7 +364,9 @@ export default function SettingsPage() {
         <input
           type="number"
           value={val}
-          onChange={(e) => save(key, e.target.value)}
+          onChange={(e) => inputChange(key, e.target.value)}
+          onBlur={() => inputBlur(key)}
+          onKeyDown={(e) => inputKeyDown(key, e)}
           disabled={isSaving}
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white text-sm w-24"
         />
