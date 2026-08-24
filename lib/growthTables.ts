@@ -4,8 +4,9 @@
 // (L = Box-Cox power, M = median, S = coefficient of variation) per month,
 // which is the WHO's canonical representation.
 //
-// Percentile reference lines (p01-p85) are DERIVED from LMS when needed
-// (e.g., for charting reference curves).
+// Symmetric percentile reference lines (p15, p25, p50, p75, p85) are
+// DERIVED from LMS when needed for charting reference curves.
+// Equal count above and below the median avoids visual bias.
 //
 // Source: WHO Child Growth Standards - LMS tables
 //   Boys:  https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/expanded-tables/wfa-boys-zscore-expanded-table.pdf
@@ -23,12 +24,7 @@ export type GrowthPointDate = {
   L: number;
   M: number;
   S: number;
-  /** Derived percentile reference lines (used by charts). */
-  p01: number;
-  p1: number;
-  p3: number;
-  p5: number;
-  p10: number;
+  /** Derived percentile reference lines (symmetric, used by charts). */
   p15: number;
   p25: number;
   p50: number;
@@ -39,13 +35,8 @@ export type GrowthPointDate = {
 /** Exact number of days per WHO month (365.25 / 12). */
 const DAYS_PER_MONTH = 30.4375;
 
-/** z-score for each percentile we render as reference lines. */
+/** z-score for each symmetric percentile reference line. */
 const PERCENTILE_Z: Record<string, number> = {
-  p01: -3.0905,
-  p1: -2.3268,
-  p3: -1.8812,
-  p5: -1.6452,
-  p10: -1.2817,
   p15: -1.0364,
   p25: -0.6742,
   p50: 0,
@@ -153,11 +144,6 @@ export function toPercentilePoints(
       L: point.L,
       M: point.M,
       S: point.S,
-      p01: percentiles.p01,
-      p1: percentiles.p1,
-      p3: percentiles.p3,
-      p5: percentiles.p5,
-      p10: percentiles.p10,
       p15: percentiles.p15,
       p25: percentiles.p25,
       p50: percentiles.p50,

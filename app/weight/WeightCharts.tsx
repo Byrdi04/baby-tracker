@@ -9,12 +9,6 @@ export type TimeRange = '1m' | '3m' | '6m' | '1y' | 'all';
 type CombinedDataPoint = {
   timestamp: number;
   weight?: number;
-  // 👇 ADDED NEW LOWER PERCENTILES TO TYPE
-  p01?: number; 
-  p1?: number;  
-  p3?: number;  
-  p5?: number;  
-  p10?: number; 
   p15?: number;
   p25?: number;
   p50?: number;
@@ -31,12 +25,21 @@ type Props = {
   onRangeChange?: (range: TimeRange) => void;
 };
 
+/** Symmetric percentile bands centered on p50 — equal count above and below. */
+const PERCENTILE_LINES: { key: string; label: string; color: string; dash: string; width: number }[] = [
+  { key: 'p85', label: '85%', color: '#018221ff', dash: '6 6', width: 1.5 },
+  { key: 'p75', label: '75%', color: '#029f05ff', dash: '6 6', width: 1.5 },
+  { key: 'p50', label: '50%', color: '#01ca18ff', dash: '6 6', width: 1.5 },
+  { key: 'p25', label: '25%', color: '#97b200ff', dash: '6 6', width: 1.5 },
+  { key: 'p15', label: '15%', color: '#d7c203ff', dash: '6 6', width: 1.5 },
+];
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const dateStr = new Date(label).toLocaleDateString('en-GB', {
       weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
     });
-    
+
     const sortedPayload = [...payload].sort((a: any, b: any) => {
       if (a.name === 'weight') return -1;
       return 1;
@@ -50,16 +53,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="flex flex-col gap-1">
           {sortedPayload.map((entry: any, index: number) => {
             const isBaby = entry.name === 'weight';
-            
             const percentile = entry.payload.percentile;
+            const lineDef = PERCENTILE_LINES.find(l => l.key === entry.name);
+            const entryLabel = lineDef ? lineDef.label : entry.name;
 
             return (
               <div key={index} className={`flex items-center justify-between gap-4 ${isBaby ? 'font-bold text-sm' : 'text-gray-500'}`}>
+                <div className="flex items-center gap-1.5">
+                  {!isBaby && (
+                    <span
+                      className="inline-block w-2 h-0.5 rounded-full"
+                      style={{ backgroundColor: lineDef?.color || '#888' }}
+                    />
+                  )}
+                  <span className={isBaby ? '' : 'text-gray-400'}>{isBaby ? 'Weight' : entryLabel}</span>
+                </div>
                 <div className="text-right">
-                  <span className="ml-1.5 text-xs font-sm text-gray-900 dark:text-gray-200">
-                    {Number(entry.value).toFixed(2)} kg 
+                  <span className={`ml-1.5 text-xs font-sm ${isBaby ? 'text-gray-900 dark:text-gray-200' : 'text-gray-500'}`}>
+                    {Number(entry.value).toFixed(2)} kg
                   </span>
-                  
                   {isBaby && percentile && (
                     <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">
                       ({percentile})
@@ -76,23 +88,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function WeightCharts({ 
-  chartData, 
+export default function WeightCharts({
+  chartData,
   title = "Growth Chart",
-  controlledRange,   
-  onRangeChange      
+  controlledRange,
+  onRangeChange
 }: Props) {
-  
+
   const [internalRange, setInternalRange] = useState<TimeRange>('all');
   const timeRange = controlledRange ?? internalRange;
 
   const dotRadius = useMemo(() => {
     switch (timeRange) {
-      case '1m': return 3;   
+      case '1m': return 3;
       case '3m': return 2.5;
       case '6m': return 2;
       case '1y': return 1;
-      case 'all': return 1.5; 
+      case 'all': return 1.5;
       default: return 3;
     }
   }, [timeRange]);
@@ -129,10 +141,9 @@ export default function WeightCharts({
 
     const horizon = Math.max(now, maxUserTime);
     const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
-    
+
     return horizon + threeDaysMs;
   }, [chartData]);
-
 
   const filteredData = useMemo(() => {
     if (typeof minDomain !== 'number') return chartData;
@@ -148,8 +159,7 @@ export default function WeightCharts({
         min = Math.min(min, pt.weight);
         max = Math.max(max, pt.weight);
       }
-      // 👇 UPDATED: Use p01 for minimum calculation so it zooms out enough to show the new lines
-      if (pt.p01 !== undefined) min = Math.min(min, pt.p01);
+      if (pt.p15 !== undefined) min = Math.min(min, pt.p15);
       if (pt.p85 !== undefined) max = Math.max(max, pt.p85);
     });
     if (min === Infinity) return [0, 10];
@@ -162,7 +172,7 @@ export default function WeightCharts({
     const ticks = [];
     let current = Math.floor(minVal / 2) * 2;
     if (current < 0) current = 0;
-    while (current <= maxVal + 1) { 
+    while (current <= maxVal + 1) {
       ticks.push(current);
       current += 2;
     }
@@ -173,72 +183,86 @@ export default function WeightCharts({
     return new Date(tickItem).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   };
 
-  const btnClass = (range: string) => 
+  const btnClass = (range: string) =>
     `px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-      timeRange === range 
-        ? 'bg-slate-600 text-white dark:bg-slate-500' 
+      timeRange === range
+        ? 'bg-slate-600 text-white dark:bg-slate-500'
         : 'bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
     }`;
 
   return (
     <section className="mb-6">
       <ChartCard title={title}>
-        
+
         <div className="h-64 mb-4">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>  
-              <XAxis 
-                dataKey="timestamp" 
-                type="number" 
-                domain={[minDomain, maxDomain]} 
-                allowDataOverflow={true} 
+            <LineChart data={chartData}>
+              <XAxis
+                dataKey="timestamp"
+                type="number"
+                domain={[minDomain, maxDomain]}
+                allowDataOverflow={true}
                 tickFormatter={dateFormatter}
-                tick={{ fontSize: 11 }} 
+                tick={{ fontSize: 11 }}
                 interval={timeRange === '1m' ? 0 : 'preserveStartEnd'}
               />
-              <YAxis 
-                tick={{ fontSize: 12 }} 
-                unit=" kg" 
-                domain={yDomain} 
-                ticks={yTicks}   
+              <YAxis
+                tick={{ fontSize: 12 }}
+                unit=" kg"
+                domain={yDomain}
+                ticks={yTicks}
                 allowDataOverflow={true}
                 tickFormatter={(value) => value.toString()}
                 type="number"
               />
               <Tooltip content={<CustomTooltip />} />
-              
-              <Line type="monotone" dataKey="p85" stroke="#018221ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p75" stroke="#029f05ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p50" stroke="#01ca18ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p25" stroke="#97b200ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p15" stroke="#d7c203ff" strokeWidth={1.5} strokeDasharray="6 6" dot={false} connectNulls />
 
-              {/* 👇 ADDED NEW LOWER PERCENTILE LINES HERE */}
-              <Line type="monotone" dataKey="p10" stroke="#eab308" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p5"  stroke="#f59e0b" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p3"  stroke="#ea580c" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p1"  stroke="#ef4444" strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls />
-              <Line type="monotone" dataKey="p01" stroke="#dc2626" strokeWidth={1} strokeDasharray="2 2" dot={false} connectNulls />
+              {/* Symmetric percentile reference lines */}
+              {PERCENTILE_LINES.map((line) => (
+                <Line
+                  key={line.key}
+                  type="monotone"
+                  dataKey={line.key}
+                  stroke={line.color}
+                  strokeWidth={line.width}
+                  strokeDasharray={line.dash}
+                  dot={false}
+                  connectNulls
+                />
+              ))}
 
-              <Line 
-                type="monotone" 
-                dataKey="weight" 
-                stroke="#3e6283ff" 
+              <Line
+                type="monotone"
+                dataKey="weight"
+                stroke="#3e6283ff"
                 strokeWidth={0}
-                dot={{ 
-                  fill: '#2f86f8d6', 
-                  stroke: '#51a8faff', 
-                  strokeWidth: 1, 
-                  r: dotRadius 
+                dot={{
+                  fill: '#2f86f8d6',
+                  stroke: '#51a8faff',
+                  strokeWidth: 1,
+                  r: dotRadius
                 }}
-                activeDot={{ 
-                  r: dotRadius + 1.5, 
-                  strokeWidth: 0 
+                activeDot={{
+                  r: dotRadius + 1.5,
+                  strokeWidth: 0
                 }}
-                connectNulls 
+                connectNulls
               />
             </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Legend / labels for percentile lines */}
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mb-3">
+          {PERCENTILE_LINES.map((line) => (
+            <div key={line.key} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+              <span
+                className="inline-block w-3 h-0.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: line.color }}
+              />
+              <span>{line.label}</span>
+            </div>
+          ))}
         </div>
 
         <div className="flex justify-center gap-2 flex-wrap">

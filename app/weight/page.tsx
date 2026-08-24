@@ -135,7 +135,6 @@ export default function WeightPage() {
 
   const referencePoints = growthData.map(row => ({
     timestamp: new Date(row.date).getTime(),
-    p01: row.p01, p1: row.p1, p3: row.p3, p5: row.p5, p10: row.p10,
     p15: row.p15, p25: row.p25, p50: row.p50, p75: row.p75, p85: row.p85,
     isUser: false
   }));
@@ -143,7 +142,6 @@ export default function WeightPage() {
   const correctedReferencePoints = prematurityActive && offsetMs > 0
     ? correctedGrowthData.map(row => ({
         timestamp: new Date(row.date).getTime(),
-        p01: row.p01, p1: row.p1, p3: row.p3, p5: row.p5, p10: row.p10,
         p15: row.p15, p25: row.p25, p50: row.p50, p75: row.p75, p85: row.p85,
         isUser: false
       }))
