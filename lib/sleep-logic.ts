@@ -213,6 +213,27 @@ export function processSleepStats(sleepEvents: any[]) {
     }
   }
 
+  // =========================================================
+  // 1b. NOTE-BASED OVERRIDE (NAP / NIGHT tags)
+  // =========================================================
+  // Allow the user to manually tag a sleep as nap or night in its note.
+  // Tags take precedence over automatic detection.
+  // Tags are stored as standalone lines: \n\nNAP or \n\nNIGHT
+  sortedSleeps.forEach(event => {
+    const note = (event.note || '').toUpperCase();
+    const isNightTagged = new RegExp('(?:^|\\n\\n)NIGHT$', 'm').test(note);
+    const isNapTagged = new RegExp('(?:^|\\n\\n)NAP$', 'm').test(note);
+
+    if (isNightTagged && !isNapTagged) {
+      // Explicitly tagged as night sleep
+      nightEventIds.add(event.id);
+    } else if (isNapTagged && !isNightTagged) {
+      // Explicitly tagged as nap
+      nightEventIds.delete(event.id);
+    }
+    // If both tags present or neither, keep automatic detection
+  });
+
   // 👇 NEW: Define the 14-day cutoff point for the Stat Cards
   const nowMs = Date.now();
   const fourteenDaysAgoMs = nowMs - 14 * 24 * 60 * 60 * 1000;

@@ -25,6 +25,28 @@ export default function SleepItem({ event, onClick }: { event: any, onClick: () 
   const startTime = formatTime(event.startTime);
   const duration = getDuration(event.startTime, event.endTime);
 
+  // 👇 Detect manually overridden sleep type from the note (NAP / NIGHT tags)
+  const note = event.note || '';
+  const upperNote = note.toUpperCase();
+  const hasNight = new RegExp('(?:^|\\n\\n)NIGHT$', 'm').test(upperNote);
+  const hasNap = new RegExp('(?:^|\\n\\n)NAP$', 'm').test(upperNote);
+  let sleepTypeLabel: string | null = null;
+  if (hasNight && !hasNap) sleepTypeLabel = 'Night';
+  else if (hasNap && !hasNight) sleepTypeLabel = 'Nap';
+
+  const titleWithBadge = sleepTypeLabel ? (
+    <span className="flex items-center gap-1.5">
+      <span>Sleep</span>
+      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border
+        ${sleepTypeLabel === 'Night'
+          ? 'bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-100'
+          : 'bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-800 dark:text-amber-100'}`}
+      >
+        {sleepTypeLabel}
+      </span>
+    </span>
+  ) : 'Sleep';
+
   // 👇 NEW: "Days Ago" Logic
   const daysAgo = Math.floor((Date.now() - new Date(event.startTime).getTime()) / (1000 * 60 * 60 * 24));
   
@@ -45,7 +67,7 @@ export default function SleepItem({ event, onClick }: { event: any, onClick: () 
         onClick={onClick}
         colorTheme="blue"
         icon="😴"
-        title="Sleep"
+        title={titleWithBadge}
         subText={dateLabel} // 👈 Added here
         rightTop={`💤 Sleeping since ${startTime}`}
         rightBottom={null}
@@ -60,7 +82,7 @@ export default function SleepItem({ event, onClick }: { event: any, onClick: () 
       onClick={onClick}
       colorTheme="blue"
       icon="😴"
-      title="Sleep"
+      title={titleWithBadge}
       subText={dateLabel} // 👈 Added here
       rightTop={duration}
       rightBottom={`${startTime} - ${endTime}`}

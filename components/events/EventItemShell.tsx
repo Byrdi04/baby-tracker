@@ -5,7 +5,7 @@ import { ReactNode } from 'react';
 type Props = {
   icon: string;       
   colorTheme: string; // 'blue' | 'cyan' | 'orange' | 'green'
-  title: string;
+  title: string | ReactNode;
   subText?: string | ReactNode;
   rightTop?: string | ReactNode;
   rightBottom?: string | ReactNode;

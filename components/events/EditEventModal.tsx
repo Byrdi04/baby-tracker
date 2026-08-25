@@ -70,6 +70,56 @@ const applyPortionToNote = (
   return `${clean}\n\n${tag}`;
 };
 
+/** ---- SLEEP TYPE TAG HELPERS (for SLEEP events) ---- **/
+
+const SLEEP_TYPE_NAP_LABEL = 'NAP';
+const SLEEP_TYPE_NIGHT_LABEL = 'NIGHT';
+
+// Remove our canonical sleep type tags from a note
+const stripSleepTypeTags = (text: string) => {
+  // Match the tag when it appears as a standalone line (preceded by \n\n or at start)
+  return text
+    .replace(new RegExp(`\\n\\n${SLEEP_TYPE_NAP_LABEL}`, 'gi'), '')
+    .replace(new RegExp(`\\n\\n${SLEEP_TYPE_NIGHT_LABEL}`, 'gi'), '')
+    // Also handle the case where the tag is the only content
+    .replace(new RegExp(`^${SLEEP_TYPE_NAP_LABEL}$`, 'gi'), '')
+    .replace(new RegExp(`^${SLEEP_TYPE_NIGHT_LABEL}$`, 'gi'), '')
+    .replace(/\s+-\s+/g, ' ')
+    .trim();
+};
+
+// Decide if the initial note already contains one of our sleep type tags
+const detectInitialSleepType = (noteText: string): 'NAP' | 'NIGHT' | null => {
+  const n = noteText.toUpperCase();
+  // Use regex to match the tag as a standalone line
+  const hasNight = new RegExp(`(?:^|\\n\\n)${SLEEP_TYPE_NIGHT_LABEL}$`, 'mi').test(n);
+  const hasNap = new RegExp(`(?:^|\\n\\n)${SLEEP_TYPE_NAP_LABEL}$`, 'mi').test(n);
+  if (hasNight && !hasNap) return 'NIGHT';
+  if (hasNap && !hasNight) return 'NAP';
+  return null; // both or neither -> auto
+};
+
+// Given a base note and a desired sleep type, return a new note string
+const applySleepTypeToNote = (
+  baseNote: string,
+  sleepType: 'NAP' | 'NIGHT' | null
+): string => {
+  // Remove any existing sleep type tags from the note
+  let clean = stripSleepTypeTags(baseNote).trimEnd();
+
+  if (!sleepType) {
+    return clean; // no tag -> auto
+  }
+
+  const tag = sleepType === 'NAP' ? SLEEP_TYPE_NAP_LABEL : SLEEP_TYPE_NIGHT_LABEL;
+
+  // If there is no other text, just return the tag
+  if (!clean) return `\n\n${tag}`;
+
+  // Otherwise: <existing text>\n\n<tag>
+  return `${clean}\n\n${tag}`;
+};
+
 export default function EditEventModal({ event, isOpen, onClose }: Props) {
   const router = useRouter();
 
@@ -87,7 +137,11 @@ export default function EditEventModal({ event, isOpen, onClose }: Props) {
   // NEW: portion state for FEED events
   const [portion, setPortion] = useState<'SMALL' | 'BIG' | null>(null);
 
+  // NEW: sleep type state for SLEEP events
+  const [sleepType, setSleepType] = useState<'NAP' | 'NIGHT' | null>(null);
+
   const isFeed = event?.type === 'FEED';
+  const isSleep = event?.type === 'SLEEP';
 
   // 1. Initialize State Logic
   useEffect(() => {
@@ -113,6 +167,13 @@ export default function EditEventModal({ event, isOpen, onClose }: Props) {
         setPortion(detectInitialPortion(note));
       } else {
         setPortion(null);
+      }
+
+      // Detect if note already contains a sleep type tag (NAP / NIGHT)
+      if (event.type === 'SLEEP') {
+        setSleepType(detectInitialSleepType(note));
+      } else {
+        setSleepType(null);
       }
 
       const dataObj = JSON.parse(event.data || '{}');
@@ -147,10 +208,13 @@ export default function EditEventModal({ event, isOpen, onClose }: Props) {
     }
 
     // If it's a FEED event, ensure the note has the correct portion tag applied
-    const finalNote =
-      event.type === 'FEED'
-        ? applyPortionToNote(editNote, portion)
-        : editNote;
+    // If it's a SLEEP event, ensure the note has the correct sleep type tag applied
+    let finalNote = editNote;
+    if (event.type === 'FEED') {
+      finalNote = applyPortionToNote(editNote, portion);
+    } else if (event.type === 'SLEEP') {
+      finalNote = applySleepTypeToNote(editNote, sleepType);
+    }
 
     // Recombine Date and Time strings into ISO-like string
     const finalStart = `${startDate}T${startTime}`;
@@ -221,6 +285,50 @@ export default function EditEventModal({ event, isOpen, onClose }: Props) {
                 onChange={(e) => setEndTime(e.target.value)}
                 className="w-32 p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
+            </div>
+
+            {/* SLEEP TYPE BUTTONS */}
+            <label className="block text-sm text-gray-500 mb-1">Sleep Type</label>
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setSleepType((prev) => prev === 'NAP' ? null : 'NAP')}
+                className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
+                  ${
+                    sleepType === 'NAP'
+                      ? 'bg-amber-100 border-amber-500 text-amber-700 dark:bg-amber-800 dark:text-amber-100'
+                      : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
+                  }
+                `}
+              >
+                Nap
+              </button>
+              <button
+                type="button"
+                onClick={() => setSleepType((prev) => prev === 'NIGHT' ? null : 'NIGHT')}
+                className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
+                  ${
+                    sleepType === 'NIGHT'
+                      ? 'bg-indigo-100 border-indigo-500 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-100'
+                      : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
+                  }
+                `}
+              >
+                Night sleep
+              </button>
+              <button
+                type="button"
+                onClick={() => setSleepType(null)}
+                className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
+                  ${
+                    sleepType === null
+                      ? 'bg-gray-200 border-gray-500 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
+                      : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
+                  }
+                `}
+              >
+                Auto
+              </button>
             </div>
           </>
         )}
