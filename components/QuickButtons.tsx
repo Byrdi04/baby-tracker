@@ -252,7 +252,7 @@ export default function QuickButtons() {
           `}
         >
           <span className="text-2xl">{medicineGiven ? '👏' : '💊'}</span>
-          <span className="font-semibold">{medicineGiven ? 'Vitamins given' : 'Give vitamins'}</span>
+          <span className="font-semibold">{medicineGiven ? 'Vitamins done' : 'Give vitamins'}</span>
         </button>
 
         {/* Layout of the Weight button */}
