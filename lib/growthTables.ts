@@ -25,11 +25,15 @@ export type GrowthPointDate = {
   M: number;
   S: number;
   /** Derived percentile reference lines (symmetric, used by charts). */
-  p15: number;
-  p25: number;
+  p2: number;
+  p7: number;
+  p16: number;
+  p31: number;
   p50: number;
-  p75: number;
-  p85: number;
+  p69: number;
+  p84: number;
+  p93: number;
+  p98: number;
 };
 
 /** Exact number of days per WHO month (365.25 / 12). */
@@ -37,11 +41,15 @@ const DAYS_PER_MONTH = 30.4375;
 
 /** z-score for each symmetric percentile reference line. */
 const PERCENTILE_Z: Record<string, number> = {
-  p15: -1.0364,
-  p25: -0.6742,
+  p2: -2,
+  p7: -1.5,
+  p16: -1,
+  p31: -0.5,
   p50: 0,
-  p75: 0.6742,
-  p85: 1.0364,
+  p69: 0.5,
+  p84: 1,
+  p93: 1.5,
+  p98: 2,
 };
 
 /** Convert a z-score to a weight using the WHO LMS formula. */
@@ -144,11 +152,15 @@ export function toPercentilePoints(
       L: point.L,
       M: point.M,
       S: point.S,
-      p15: percentiles.p15,
-      p25: percentiles.p25,
+      p2: percentiles.p2,
+      p7: percentiles.p7,
+      p16: percentiles.p16,
+      p31: percentiles.p31,
       p50: percentiles.p50,
-      p75: percentiles.p75,
-      p85: percentiles.p85,
+      p69: percentiles.p69,
+      p84: percentiles.p84,
+      p93: percentiles.p93,
+      p98: percentiles.p98,
     };
   });
 }

@@ -9,11 +9,15 @@ export type TimeRange = '1m' | '3m' | '6m' | '1y' | 'all';
 type CombinedDataPoint = {
   timestamp: number;
   weight?: number;
-  p15?: number;
-  p25?: number;
+  p2?: number;
+  p7?: number;
+  p16?: number;
+  p31?: number;
   p50?: number;
-  p75?: number;
-  p85?: number;
+  p69?: number;
+  p84?: number;
+  p93?: number;
+  p98?: number;
   percentile?: string;
   isUser?: boolean;
 };
@@ -25,13 +29,20 @@ type Props = {
   onRangeChange?: (range: TimeRange) => void;
 };
 
-/** Symmetric percentile bands centered on p50 — equal count above and below. */
-const PERCENTILE_LINES: { key: string; label: string; color: string; dash: string; width: number }[] = [
-  { key: 'p85', label: '85%', color: '#018221ff', dash: '6 6', width: 1.5 },
-  { key: 'p75', label: '75%', color: '#029f05ff', dash: '6 6', width: 1.5 },
-  { key: 'p50', label: '50%', color: '#01ca18ff', dash: '6 6', width: 1.5 },
-  { key: 'p25', label: '25%', color: '#97b200ff', dash: '6 6', width: 1.5 },
-  { key: 'p15', label: '15%', color: '#d7c203ff', dash: '6 6', width: 1.5 },
+/**
+ * Nine symmetric percentile bands centered on p50 — 4 above, 1 middle, 4 below.
+ * These correspond to WHO standard z-scores: +-2, +-1.5, +-1, +-0.5, 0.
+ */
+const PERCENTILE_LINES: { key: string; label: string; z: number; color: string; dash: string; width: number }[] = [
+  { key: 'p98', label: '98%', z: 2,      color: '#00441b', dash: '8 4', width: 1 },
+  { key: 'p93', label: '93%', z: 1.5,    color: '#1b7837', dash: '6 4', width: 1.2 },
+  { key: 'p84', label: '84%', z: 1,      color: '#5aae61', dash: '4 4', width: 1.4 },
+  { key: 'p69', label: '69%', z: 0.5,    color: '#a6dba0', dash: '2 4', width: 1.4 },
+  { key: 'p50', label: '50%', z: 0,      color: '#01ca18ff', dash: '6 6', width: 1.5 },
+  { key: 'p31', label: '31%', z: -0.5,   color: '#f1b6da', dash: '2 4', width: 1.4 },
+  { key: 'p16', label: '16%', z: -1,     color: '#de77ae', dash: '4 4', width: 1.4 },
+  { key: 'p7',  label: '7%',  z: -1.5,   color: '#c51b7d', dash: '6 4', width: 1.2 },
+  { key: 'p2',  label: '2%',  z: -2,     color: '#8e0152', dash: '8 4', width: 1 },
 ];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -58,18 +69,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             const entryLabel = lineDef ? lineDef.label : entry.name;
 
             return (
-              <div key={index} className={`flex items-center justify-between gap-4 ${isBaby ? 'font-bold text-sm' : 'text-gray-500'}`}>
+              <div key={index} className={`flex items-center justify-between gap-4 ${isBaby ? 'font-bold text-sm' : ''}`}>
                 <div className="flex items-center gap-1.5">
                   {!isBaby && (
                     <span
-                      className="inline-block w-2 h-0.5 rounded-full"
+                      className="inline-block w-2 h-0.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: lineDef?.color || '#888' }}
                     />
                   )}
-                  <span className={isBaby ? '' : 'text-gray-400'}>{isBaby ? 'Weight' : entryLabel}</span>
+                  <span className={`${isBaby ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {isBaby ? 'Weight' : entryLabel}
+                  </span>
                 </div>
                 <div className="text-right">
-                  <span className={`ml-1.5 text-xs font-sm ${isBaby ? 'text-gray-900 dark:text-gray-200' : 'text-gray-500'}`}>
+                  <span className={`ml-1.5 text-xs font-sm ${isBaby ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
                     {Number(entry.value).toFixed(2)} kg
                   </span>
                   {isBaby && percentile && (
@@ -159,8 +172,8 @@ export default function WeightCharts({
         min = Math.min(min, pt.weight);
         max = Math.max(max, pt.weight);
       }
-      if (pt.p15 !== undefined) min = Math.min(min, pt.p15);
-      if (pt.p85 !== undefined) max = Math.max(max, pt.p85);
+      if (pt.p2 !== undefined) min = Math.min(min, pt.p2);
+      if (pt.p98 !== undefined) max = Math.max(max, pt.p98);
     });
     if (min === Infinity) return [0, 10];
     return [min - 0.2, max + 0.2];
@@ -217,7 +230,7 @@ export default function WeightCharts({
               />
               <Tooltip content={<CustomTooltip />} />
 
-              {/* Symmetric percentile reference lines */}
+              {/* Symmetric percentile reference lines — 4 above, 1 middle, 4 below */}
               {PERCENTILE_LINES.map((line) => (
                 <Line
                   key={line.key}
