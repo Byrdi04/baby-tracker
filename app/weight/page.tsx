@@ -230,7 +230,7 @@ export default function WeightPage() {
         />
 
         <StatCard
-          label={prematurityActive && correctedPercentileStr ? "Current percentile (corrected)" : "Current percentile"}
+          label="Percentile"
           value={currentPercentile}
           color="blue"
         />
