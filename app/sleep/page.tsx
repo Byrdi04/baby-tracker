@@ -5,7 +5,7 @@ import SleepCharts from '@/components/sleep/SleepCharts';
 import SleepTimeline from '@/components/SleepTimeline'; 
 import EventList from '@/components/events/EventList';
 import SleepStats from '@/components/sleep/SleepStats';
-import { getDayStartHour, getBabyBirthday, getBabyGender } from '@/lib/settings';
+import { getDayStartHour, getBabyBirthday, getBabyGender, getHistoryChunkDays } from '@/lib/settings';
 
 // Import the logic functions
 import { 
@@ -18,6 +18,7 @@ export default function SleepPage() {
   const dayStartHour = getDayStartHour();
   const birthDate = getBabyBirthday();
   const gender = getBabyGender();
+  const rollingPeriod = getHistoryChunkDays();
 
   // 1. Fetch Data
   const stmt = db.prepare(`
@@ -36,8 +37,11 @@ export default function SleepPage() {
     trendData,
     napDurationData, 
     napStartTimeData,
-    wakeupsData
-  } = processSleepStats(sleepEvents);
+    wakeupsData,
+    bedtimeMeanTrend,
+    wakeupMeanTrend,
+    nightLengthMeanTrend,
+  } = processSleepStats(sleepEvents, rollingPeriod);
 
   const timelineData = generateTimelineData(sleepEvents, nightEventIds, new Date(), 7, dayStartHour);
   const sleepProbabilityData = calculateSleepProbability(completedSleeps, dayStartHour);
@@ -62,10 +66,10 @@ export default function SleepPage() {
         napDurationData={napDurationData} 
         napStartTimeData={napStartTimeData} 
         sleepProbabilityData={sleepProbabilityData}
-        wakeupsData={wakeupsData}
-        medianWakeupsLast14={stats.medianWakeupsLast14}
-        longestStretchMinutesLast14={stats.longestStretchMinutesLast14}
         dayStartHour={dayStartHour}
+        bedtimeMeanTrend={bedtimeMeanTrend}
+        wakeupMeanTrend={wakeupMeanTrend}
+        nightLengthMeanTrend={nightLengthMeanTrend}
       />
 
       <section>

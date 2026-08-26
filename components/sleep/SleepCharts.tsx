@@ -5,8 +5,6 @@ import {
   ResponsiveContainer, CartesianGrid 
 } from 'recharts';
 import ChartCard from '@/components/ui/ChartCard'; 
-import { useEffect } from 'react';
-import StatCard from '@/components/ui/StatCard';
 
 type ChartDataPoint = {
   label: string;
@@ -25,25 +23,31 @@ type TrendPoint = {
   nap: number;
 };
 
+type MeanTimingPoint = {
+  date: string;
+  meanBedtime: number;
+};
+
+type MeanWakeupPoint = {
+  date: string;
+  meanWakeup: number;
+};
+
+type MeanNightLengthPoint = {
+  date: string;
+  meanNightHours: number;
+};
+
 type Props = {
   chartData: { date: string; nightHours: number; napHours: number }[]; 
   trendData: TrendPoint[];
   napDurationData: ChartDataPoint[];
   napStartTimeData: ChartDataPoint[];
   sleepProbabilityData: ProbabilityPoint[];
-  wakeupsData: { date: number; wakeups: number }[];
-  medianWakeupsLast14: number;            
-  longestStretchMinutesLast14: number;
   dayStartHour?: number;
-};
-
-const formatMinutes = (mins: number) => {
-  if (!mins || mins <= 0) return '–';
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
+  bedtimeMeanTrend: MeanTimingPoint[];
+  wakeupMeanTrend: MeanWakeupPoint[];
+  nightLengthMeanTrend: MeanNightLengthPoint[];
 };
 
 // --- Custom Tooltip for Stacked Bar Chart ---
@@ -95,14 +99,11 @@ export default function SleepCharts({
   napDurationData, 
   napStartTimeData, 
   sleepProbabilityData, 
-  wakeupsData,
-  medianWakeupsLast14,           
-  longestStretchMinutesLast14,
-  dayStartHour
+  dayStartHour,
+  bedtimeMeanTrend,
+  wakeupMeanTrend,
+  nightLengthMeanTrend,
 }: Props) {
-    useEffect(() => {
-    console.log('Wakeups Data:', wakeupsData);
-  }, [wakeupsData]);
 
   // Format the time boundary label dynamically
   const hour = dayStartHour ?? 6;
@@ -110,14 +111,24 @@ export default function SleepCharts({
   const amPm = hour >= 12 ? 'pm' : 'am';
   const headerTimeStr = `${displayHour}.00${amPm} - ${displayHour}.00${amPm}`;
 
-  const wakeupsChartData = wakeupsData.map((d) => ({
-    ...d,
-    label: new Date(d.date).toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    }),
-  }));
+  // Merge bedtime and wakeup trend data into a single array for Recharts
+  const dateSet = new Set<string>();
+  bedtimeMeanTrend.forEach(d => dateSet.add(d.date));
+  wakeupMeanTrend.forEach(d => dateSet.add(d.date));
+  
+  const combinedTimingData = Array.from(dateSet).sort((a, b) => {
+    // Parse date strings for sorting (format: "Wed, 15 Jan")
+    const parseDate = (s: string) => new Date(s);
+    return parseDate(a).getTime() - parseDate(b).getTime();
+  }).map(date => {
+    const bed = bedtimeMeanTrend.find(d => d.date === date);
+    const wake = wakeupMeanTrend.find(d => d.date === date);
+    return {
+      date,
+      meanBedtime: bed?.meanBedtime ?? null,
+      meanWakeup: wake?.meanWakeup ?? null,
+    };
+  });
 
   return (
     <section className="space-y-6 mb-4">
@@ -217,62 +228,68 @@ export default function SleepCharts({
         </div>
       </ChartCard>
 
-      {/* 4. Night Wake-ups Line Chart (All Time) */}
-      <ChartCard>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <StatCard
-            label="Night wake-ups"
-            value={medianWakeupsLast14.toFixed(0)}
-            color="emerald"
-          />
-          <StatCard
-            label="Longest sleep"
-            value={formatMinutes(longestStretchMinutesLast14)}
-            color="green"
-          />
+      {/* 4. Mean Bedtime & Wake-up Time Trend (Rolling Average) */}
+      <ChartCard title="Bedtime & Wake-up Time (Rolling Mean)">
+        <div className="flex items-center gap-3 text-sm font-medium text-gray-500 mb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" /> 
+            <span>Bedtime</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-[#10b981]" /> 
+            <span>Wake-up</span>
+          </div>
         </div>
-
-        <div className="flex flex-wrap items-center justify-between mb-2 gap-y-1">
-          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mr-2">
-            Night Wake-ups
-          </h3>
-        </div>
-
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={wakeupsChartData}>
+            <LineChart data={combinedTimingData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-              
-              {wakeupsChartData.length === 0 ? (
-                <text x={20} y={20} fill="#9CA3AF">No wake-up data available</text>
-              ) : (
-                <>
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 10 }}
-                    interval="preserveStartEnd"  
-                    minTickGap={12}              
-                  />
-                  
-                  <YAxis tick={{ fontSize: 12 }} width={30} />
-                  
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px' }}
-                    itemStyle={{ fontSize: '12px', padding: 0 }}
-                    labelFormatter={(label) => label as string}
-                    formatter={(value) => [`${value} wake-ups`, 'Wake-ups']}
-                  />
-                  
-                  <Line 
-                    type="monotone" 
-                    dataKey="wakeups"        
-                    stroke="#0d9488" 
-                    strokeWidth={2} 
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                </>
-              )}
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis 
+                tick={{ fontSize: 12 }} 
+                width={38}
+                domain={[18, 30]}
+                tickFormatter={(val: number) => {
+                  const h = val >= 24 ? val - 24 : val;
+                  const m = Math.round((val - Math.floor(val)) * 60);
+                  return `${Math.floor(h).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                }}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: '8px' }}
+                itemStyle={{ fontSize: '12px', padding: 0 }}
+                labelFormatter={(label) => label as string}
+                formatter={(value: any, name: any) => {
+                  const val = Number(value);
+                  const h = val >= 24 ? val - 24 : val;
+                  const m = Math.round((h - Math.floor(h)) * 60);
+                  const timeStr = `${Math.floor(h).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                  const label = name === 'meanBedtime' ? 'Bedtime' : 'Wake-up';
+                  return [timeStr, label];
+                }}
+              />
+              <Line type="monotone" dataKey="meanBedtime" name="meanBedtime" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="meanWakeup" name="meanWakeup" stroke="#10b981" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </ChartCard>
+
+      {/* 5. Mean Night Sleep Length Trend (Rolling Average) */}
+      <ChartCard title="Night Sleep Length (Rolling Mean)">
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={nightLengthMeanTrend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 12 }} width={30} unit="h" domain={[0, 'auto']} />
+              <Tooltip
+                contentStyle={{ borderRadius: '8px' }}
+                itemStyle={{ fontSize: '12px', padding: 0 }}
+                labelFormatter={(label) => label as string}
+                formatter={(value: any) => [`${Number(value).toFixed(1)}h`, 'Night sleep']}
+              />
+              <Line type="monotone" dataKey="meanNightHours" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

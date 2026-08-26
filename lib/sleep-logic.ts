@@ -145,7 +145,7 @@ export function calculateNightWakeups(
 
 // ================= MAIN PROCESSING LOGIC =================
 
-export function processSleepStats(sleepEvents: any[]) {
+export function processSleepStats(sleepEvents: any[], rollingPeriodDays: number = 14) {
   const completedSleeps = sleepEvents.filter((e: any) => e.endTime);
   
   const sortedSleeps = [...completedSleeps].sort((a, b) => 
@@ -426,6 +426,64 @@ export function processSleepStats(sleepEvents: any[]) {
   });
   const napStartTimeData = Object.entries(startTimeBuckets).map(([label, value]) => ({ label, value }));
 
+  // =========================================================
+  // 5. ROLLING MEAN DATA (Bedtime / Wakeup / Night Length)
+  // =========================================================
+  // Build per-night bedtimes and wake-up times (in decimal hours)
+  const nightTimingByDay: { dateKey: string; date: Date; bedtime: number; wakeup: number; nightMins: number }[] = [];
+
+  Object.entries(nightGroups).forEach(([key, group]) => {
+    let bedTimeDec = group.start.getHours() + (group.start.getMinutes() / 60);
+    if (bedTimeDec < 12) bedTimeDec += 24; // normalize to 0-36 range (so 22:00=22, 01:00=25)
+    const wakeTimeDec = group.end.getHours() + (group.end.getMinutes() / 60);
+    
+    nightTimingByDay.push({
+      dateKey: key,
+      date: new Date(key),
+      bedtime: bedTimeDec,
+      wakeup: wakeTimeDec,
+      nightMins: group.duration,
+    });
+  });
+
+  nightTimingByDay.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // Compute rolling means over the configured period
+  const bedtimeMeanTrend: { date: string; meanBedtime: number }[] = [];
+  const wakeupMeanTrend: { date: string; meanWakeup: number }[] = [];
+  const nightLengthMeanTrend: { date: string; meanNightHours: number }[] = [];
+
+  for (let i = 0; i < nightTimingByDay.length; i++) {
+    // Window start: i - rollingPeriodDays + 1, clamped to 0
+    const windowStart = Math.max(0, i - rollingPeriodDays + 1);
+    const windowCount = i - windowStart + 1;
+
+    let bedSum = 0, wakeSum = 0, nightSum = 0;
+    for (let j = windowStart; j <= i; j++) {
+      bedSum += nightTimingByDay[j].bedtime;
+      wakeSum += nightTimingByDay[j].wakeup;
+      nightSum += nightTimingByDay[j].nightMins;
+    }
+
+    const entry = nightTimingByDay[i];
+    const dateLabel = entry.date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
+    bedtimeMeanTrend.push({
+      date: dateLabel,
+      meanBedtime: bedSum / windowCount,
+    });
+
+    wakeupMeanTrend.push({
+      date: dateLabel,
+      meanWakeup: wakeSum / windowCount,
+    });
+
+    nightLengthMeanTrend.push({
+      date: dateLabel,
+      meanNightHours: Math.round((nightSum / windowCount / 60) * 10) / 10,
+    });
+  }
+
   const {
     wakeupsData,
     medianWakeupsLast14,
@@ -455,6 +513,9 @@ export function processSleepStats(sleepEvents: any[]) {
     napDurationData,
     napStartTimeData,
     wakeupsData,
+    bedtimeMeanTrend,
+    wakeupMeanTrend,
+    nightLengthMeanTrend,
   };
 }
 
