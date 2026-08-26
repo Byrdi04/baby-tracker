@@ -39,8 +39,8 @@ export default function SleepItem({ event, onClick }: { event: any, onClick: () 
       <span>Sleep</span>
       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border
         ${sleepTypeLabel === 'Night'
-          ? 'bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-100'
-          : 'bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-800 dark:text-amber-100'}`}
+          ? 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-800 dark:text-blue-100'
+          : 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-800 dark:text-purple-100'}`}
       >
         {sleepTypeLabel}
       </span>

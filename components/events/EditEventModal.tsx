@@ -292,11 +292,24 @@ export default function EditEventModal({ event, isOpen, onClose }: Props) {
             <div className="flex gap-2 mb-4">
               <button
                 type="button"
+                onClick={() => setSleepType(null)}
+                className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
+                  ${
+                    sleepType === null
+                      ? 'bg-gray-200 border-gray-500 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
+                      : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
+                  }
+                `}
+              >
+                Auto
+              </button>
+              <button
+                type="button"
                 onClick={() => setSleepType((prev) => prev === 'NAP' ? null : 'NAP')}
                 className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
                   ${
                     sleepType === 'NAP'
-                      ? 'bg-amber-100 border-amber-500 text-amber-700 dark:bg-amber-800 dark:text-amber-100'
+                      ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-800 dark:text-purple-100'
                       : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
                   }
                 `}
@@ -309,25 +322,12 @@ export default function EditEventModal({ event, isOpen, onClose }: Props) {
                 className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
                   ${
                     sleepType === 'NIGHT'
-                      ? 'bg-indigo-100 border-indigo-500 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-100'
+                      ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-800 dark:text-blue-100'
                       : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
                   }
                 `}
               >
                 Night sleep
-              </button>
-              <button
-                type="button"
-                onClick={() => setSleepType(null)}
-                className={`px-3 py-2 rounded-full text-xs font-medium border transition-colors
-                  ${
-                    sleepType === null
-                      ? 'bg-gray-200 border-gray-500 text-gray-700 dark:bg-gray-600 dark:text-gray-200'
-                      : 'bg-transparent border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'
-                  }
-                `}
-              >
-                Auto
               </button>
             </div>
           </>
