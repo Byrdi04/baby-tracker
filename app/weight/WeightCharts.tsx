@@ -265,19 +265,6 @@ export default function WeightCharts({
           </ResponsiveContainer>
         </div>
 
-        {/* Legend / labels for percentile lines */}
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mb-3">
-          {PERCENTILE_LINES.map((line) => (
-            <div key={line.key} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-              <span
-                className="inline-block w-3 h-0.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: line.color }}
-              />
-              <span>{line.label}</span>
-            </div>
-          ))}
-        </div>
-
         <div className="flex justify-center gap-2 flex-wrap">
           <button onClick={() => handleRangeClick('1m')} className={btnClass('1m')}>1 Mo</button>
           <button onClick={() => handleRangeClick('3m')} className={btnClass('3m')}>3 Mo</button>
