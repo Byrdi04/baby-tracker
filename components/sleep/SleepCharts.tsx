@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, 
   ResponsiveContainer, CartesianGrid 
@@ -26,16 +27,19 @@ type TrendPoint = {
 type MeanTimingPoint = {
   date: string;
   meanBedtime: number;
+  timestamp: number;
 };
 
 type MeanWakeupPoint = {
   date: string;
   meanWakeup: number;
+  timestamp: number;
 };
 
 type MeanNightLengthPoint = {
   date: string;
   meanNightHours: number;
+  timestamp: number;
 };
 
 type Props = {
@@ -49,6 +53,8 @@ type Props = {
   wakeupMeanTrend: MeanWakeupPoint[];
   nightLengthMeanTrend: MeanNightLengthPoint[];
 };
+
+type TimeRange = '1m' | '3m' | '6m' | '1y' | 'all';
 
 // --- Custom Tooltip for Stacked Bar Chart ---
 const CustomBarTooltip = ({ active, payload, label }: any) => {
@@ -81,17 +87,50 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// --- Custom Tick for Histogram ---
-const CustomTick = (props: any) => {
-    const { x, y, payload } = props;
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={4} textAnchor="end" fill="#9CA3AF" transform="rotate(-90)" fontSize={10}>
-          {payload.value}
-        </text>
-      </g>
-    );
-  };
+// --- Time formatter helper for Y-axis ticks (decimal hours → HH:MM) ---
+const formatHourTick = (val: number) => {
+  const h = val >= 24 ? val - 24 : val;
+  const m = Math.round((h - Math.floor(h)) * 60);
+  return `${Math.floor(h).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+// --- Time formatter for tooltip (decimal hours → HH:MM) ---
+const formatTimeForTooltip = (val: number) => {
+  const h = val >= 24 ? val - 24 : val;
+  const m = Math.round((h - Math.floor(h)) * 60);
+  return `${Math.floor(h).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+// Compute Y-axis domain with margin for a set of numeric values
+const domainWithMargin = (values: (number | null)[], marginPercent: number = 0.08): [number, number] => {
+  const valid = values.filter((v): v is number => v !== null);
+  if (valid.length === 0) return [0, 1];
+  const min = Math.min(...valid);
+  const max = Math.max(...valid);
+  const range = max - min || 1;
+  return [min - range * marginPercent, max + range * marginPercent];
+};
+
+// --- Time range button component ---
+const btnClass = (active: boolean) =>
+  `px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+    active
+      ? 'bg-slate-600 text-white dark:bg-slate-500'
+      : 'bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+  }`;
+
+// --- Compute cutoff timestamp for a time range ---
+const getCutoffMs = (range: TimeRange): number | null => {
+  if (range === 'all') return null;
+  const now = Date.now();
+  const ms = {
+    '1m': 30 * 24 * 60 * 60 * 1000,
+    '3m': 90 * 24 * 60 * 60 * 1000,
+    '6m': 180 * 24 * 60 * 60 * 1000,
+    '1y': 365 * 24 * 60 * 60 * 1000,
+  }[range];
+  return now - ms;
+};
 
 export default function SleepCharts({ 
   chartData, 
@@ -105,30 +144,59 @@ export default function SleepCharts({
   nightLengthMeanTrend,
 }: Props) {
 
+  // Shared time range state
+  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+
   // Format the time boundary label dynamically
   const hour = dayStartHour ?? 6;
   const displayHour = hour > 12 ? hour - 12 : hour;
   const amPm = hour >= 12 ? 'pm' : 'am';
   const headerTimeStr = `${displayHour}.00${amPm} - ${displayHour}.00${amPm}`;
 
-  // Merge bedtime and wakeup trend data into a single array for Recharts
-  const dateSet = new Set<string>();
-  bedtimeMeanTrend.forEach(d => dateSet.add(d.date));
-  wakeupMeanTrend.forEach(d => dateSet.add(d.date));
-  
-  const combinedTimingData = Array.from(dateSet).sort((a, b) => {
-    // Parse date strings for sorting (format: "Wed, 15 Jan")
-    const parseDate = (s: string) => new Date(s);
-    return parseDate(a).getTime() - parseDate(b).getTime();
-  }).map(date => {
-    const bed = bedtimeMeanTrend.find(d => d.date === date);
-    const wake = wakeupMeanTrend.find(d => d.date === date);
-    return {
-      date,
-      meanBedtime: bed?.meanBedtime ?? null,
-      meanWakeup: wake?.meanWakeup ?? null,
-    };
-  });
+  // Filter data by selected time range
+  const cutoffMs = getCutoffMs(timeRange);
+
+  const filteredBedtime = useMemo(() => 
+    cutoffMs ? bedtimeMeanTrend.filter(d => d.timestamp >= cutoffMs) : bedtimeMeanTrend,
+    [bedtimeMeanTrend, cutoffMs]
+  );
+
+  const filteredWakeup = useMemo(() => 
+    cutoffMs ? wakeupMeanTrend.filter(d => d.timestamp >= cutoffMs) : wakeupMeanTrend,
+    [wakeupMeanTrend, cutoffMs]
+  );
+
+  const filteredNightLength = useMemo(() => 
+    cutoffMs ? nightLengthMeanTrend.filter(d => d.timestamp >= cutoffMs) : nightLengthMeanTrend,
+    [nightLengthMeanTrend, cutoffMs]
+  );
+
+  // Y-axis domains with margin
+  const bedtimeDomain = useMemo(() => 
+    domainWithMargin(filteredBedtime.map(d => d.meanBedtime), 0.08),
+    [filteredBedtime]
+  );
+
+  const wakeupDomain = useMemo(() => 
+    domainWithMargin(filteredWakeup.map(d => d.meanWakeup), 0.08),
+    [filteredWakeup]
+  );
+
+  const nightLengthDomain = useMemo(() => 
+    domainWithMargin(filteredNightLength.map(d => d.meanNightHours), 0.08),
+    [filteredNightLength]
+  );
+
+  // Time range buttons row
+  const rangeButtons = (
+    <div className="flex justify-center gap-1.5 flex-wrap">
+      <button onClick={() => setTimeRange('1m')} className={btnClass(timeRange === '1m')}>1 Mo</button>
+      <button onClick={() => setTimeRange('3m')} className={btnClass(timeRange === '3m')}>3 Mo</button>
+      <button onClick={() => setTimeRange('6m')} className={btnClass(timeRange === '6m')}>6 Mo</button>
+      <button onClick={() => setTimeRange('1y')} className={btnClass(timeRange === '1y')}>1 Yr</button>
+      <button onClick={() => setTimeRange('all')} className={btnClass(timeRange === 'all')}>All</button>
+    </div>
+  );
 
   return (
     <section className="space-y-6 mb-4">
@@ -151,7 +219,6 @@ export default function SleepCharts({
       {/* 2. Daily Sleep Chart (STACKED) */}
       <ChartCard>
         <div className="flex items-center justify-between mb-2">
-          {/* 3. Added the dynamic header string to the title */}
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
             Sleep per Day <span className="text-sm font-normal text-gray-500">({headerTimeStr})</span>
           </h3>
@@ -187,7 +254,6 @@ export default function SleepCharts({
       {/* 3. Sleep Trends Line Chart (Last 30 Days) */}
       <ChartCard>
         <div className="flex flex-wrap items-center justify-between mb-2 gap-y-1">
-          {/* 4. Added the dynamic header string here as well */}
           <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mr-2">
             Sleep Trends <span className="text-sm font-normal text-gray-500">({headerTimeStr})</span>
           </h3>
@@ -228,61 +294,66 @@ export default function SleepCharts({
         </div>
       </ChartCard>
 
-      {/* 4. Mean Bedtime & Wake-up Time Trend (Rolling Average) */}
-      <ChartCard title="Bedtime & Wake-up Time (Rolling Mean)">
-        <div className="flex items-center gap-3 text-sm font-medium text-gray-500 mb-2">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" /> 
-            <span>Bedtime</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-[#10b981]" /> 
-            <span>Wake-up</span>
-          </div>
-        </div>
+      {/* 4. Mean Bedtime (Rolling Average) */}
+      <ChartCard title="Bedtime (Rolling Mean)">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={combinedTimingData}>
+            <LineChart data={filteredBedtime}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis 
                 tick={{ fontSize: 12 }} 
                 width={38}
-                domain={[18, 30]}
-                tickFormatter={(val: number) => {
-                  const h = val >= 24 ? val - 24 : val;
-                  const m = Math.round((val - Math.floor(val)) * 60);
-                  return `${Math.floor(h).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                }}
+                domain={bedtimeDomain}
+                tickFormatter={formatHourTick}
               />
               <Tooltip
                 contentStyle={{ borderRadius: '8px' }}
                 itemStyle={{ fontSize: '12px', padding: 0 }}
                 labelFormatter={(label) => label as string}
-                formatter={(value: any, name: any) => {
-                  const val = Number(value);
-                  const h = val >= 24 ? val - 24 : val;
-                  const m = Math.round((h - Math.floor(h)) * 60);
-                  const timeStr = `${Math.floor(h).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                  const label = name === 'meanBedtime' ? 'Bedtime' : 'Wake-up';
-                  return [timeStr, label];
-                }}
+                formatter={(value: any) => [formatTimeForTooltip(Number(value)), 'Bedtime']}
               />
-              <Line type="monotone" dataKey="meanBedtime" name="meanBedtime" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
-              <Line type="monotone" dataKey="meanWakeup" name="meanWakeup" stroke="#10b981" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="meanBedtime" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        {rangeButtons}
       </ChartCard>
 
-      {/* 5. Mean Night Sleep Length Trend (Rolling Average) */}
+      {/* 5. Mean Wake-up Time (Rolling Average) */}
+      <ChartCard title="Wake-up Time (Rolling Mean)">
+        <div className="h-60">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={filteredWakeup}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis 
+                tick={{ fontSize: 12 }} 
+                width={38}
+                domain={wakeupDomain}
+                tickFormatter={formatHourTick}
+              />
+              <Tooltip
+                contentStyle={{ borderRadius: '8px' }}
+                itemStyle={{ fontSize: '12px', padding: 0 }}
+                labelFormatter={(label) => label as string}
+                formatter={(value: any) => [formatTimeForTooltip(Number(value)), 'Wake-up']}
+              />
+              <Line type="monotone" dataKey="meanWakeup" stroke="#10b981" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        {rangeButtons}
+      </ChartCard>
+
+      {/* 6. Mean Night Sleep Length (Rolling Average) */}
       <ChartCard title="Night Sleep Length (Rolling Mean)">
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={nightLengthMeanTrend}>
+            <LineChart data={filteredNightLength}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 12 }} width={30} unit="h" domain={[0, 'auto']} />
+              <YAxis tick={{ fontSize: 12 }} width={30} unit="h" domain={nightLengthDomain} />
               <Tooltip
                 contentStyle={{ borderRadius: '8px' }}
                 itemStyle={{ fontSize: '12px', padding: 0 }}
@@ -293,6 +364,7 @@ export default function SleepCharts({
             </LineChart>
           </ResponsiveContainer>
         </div>
+        {rangeButtons}
       </ChartCard>
 
     </section>

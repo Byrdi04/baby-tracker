@@ -449,9 +449,9 @@ export function processSleepStats(sleepEvents: any[], rollingPeriodDays: number 
   nightTimingByDay.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   // Compute rolling means over the configured period
-  const bedtimeMeanTrend: { date: string; meanBedtime: number }[] = [];
-  const wakeupMeanTrend: { date: string; meanWakeup: number }[] = [];
-  const nightLengthMeanTrend: { date: string; meanNightHours: number }[] = [];
+  const bedtimeMeanTrend: { date: string; meanBedtime: number; timestamp: number }[] = [];
+  const wakeupMeanTrend: { date: string; meanWakeup: number; timestamp: number }[] = [];
+  const nightLengthMeanTrend: { date: string; meanNightHours: number; timestamp: number }[] = [];
 
   for (let i = 0; i < nightTimingByDay.length; i++) {
     // Window start: i - rollingPeriodDays + 1, clamped to 0
@@ -471,16 +471,19 @@ export function processSleepStats(sleepEvents: any[], rollingPeriodDays: number 
     bedtimeMeanTrend.push({
       date: dateLabel,
       meanBedtime: bedSum / windowCount,
+      timestamp: entry.date.getTime(),
     });
 
     wakeupMeanTrend.push({
       date: dateLabel,
       meanWakeup: wakeSum / windowCount,
+      timestamp: entry.date.getTime(),
     });
 
     nightLengthMeanTrend.push({
       date: dateLabel,
       meanNightHours: Math.round((nightSum / windowCount / 60) * 10) / 10,
+      timestamp: entry.date.getTime(),
     });
   }
 
