@@ -353,7 +353,13 @@ export default function SleepCharts({
             <LineChart data={filteredNightLength}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 12 }} width={30} unit="h" domain={nightLengthDomain} />
+              <YAxis 
+                tick={{ fontSize: 12 }} 
+                width={38}
+                domain={nightLengthDomain}
+                tickCount={5}
+                tickFormatter={(val: number) => `${val.toFixed(1)}h`}
+              />
               <Tooltip
                 contentStyle={{ borderRadius: '8px' }}
                 itemStyle={{ fontSize: '12px', padding: 0 }}
