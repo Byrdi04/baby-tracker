@@ -16,6 +16,11 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
 
+      {/* Page header */}
+      <header className="mb-4">
+        <h1 className="text-2xl font-bold dark:text-gray-300">👶🍼 Baby tracker</h1>
+      </header>
+
       {/* Buttons */}
       <QuickButtons />
 
