@@ -1,6 +1,7 @@
 import db from '@/lib/db';
 import QuickButtons from '@/components/QuickButtons';
 import EventList from '@/components/events/EventList';
+import BabyFaceIcon from '@/components/BabyFaceIcon';
 import { getEventsDisplayLimit, getBabyBirthday, getBabyGender } from '@/lib/settings';
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ export default function Home() {
     <main className="min-h-screen p-4 max-w-md mx-auto">
 
       {/* Page header */}
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold dark:text-gray-300">👶🍼 Baby tracker</h1>
+      <header className="mb-4 flex items-center gap-2">
+        <BabyFaceIcon className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+        <h1 className="text-2xl font-bold dark:text-gray-300">Baby tracker</h1>
       </header>
 
       {/* Buttons */}
