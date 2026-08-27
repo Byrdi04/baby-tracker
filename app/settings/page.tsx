@@ -376,7 +376,14 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen p-4 max-w-md mx-auto">
-      <header className="mb-6">
+      <header className="mb-6 flex items-center gap-3">
+        <a
+          href="/"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          aria-label="Back to home"
+        >
+          <span className="text-lg">←</span>
+        </a>
         <h1 className="text-2xl font-bold dark:text-white">⚙️ Settings</h1>
       </header>
 

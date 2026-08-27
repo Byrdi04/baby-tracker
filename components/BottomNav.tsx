@@ -12,7 +12,6 @@ export default function BottomNav() {
     { href: '/feed', label: 'Feed', icon: '🍼' },
     { href: '/diaper', label: 'Diaper', icon: '💩' },
     { href: '/weight', label: 'Weight', icon: '⚖️' },
-    { href: '/settings', label: 'Settings', icon: '⚙️' },
   ];
 
   return (
